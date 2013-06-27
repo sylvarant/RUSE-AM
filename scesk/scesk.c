@@ -23,9 +23,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdarg.h>
-#include <math.h>
 #include "sscheme.h"
+#include "string.h"
+#include <stdarg.h>
 
 #define MEM_SIZE 1024
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
@@ -53,17 +53,12 @@
  *  Functions
  *-----------------------------------------------------------------------------*/
 // functionality
-//FUNCTIONALITY char * tostring(SValue,bool);
 FUNCTIONALITY void sclearvalue(int c,void * s,SValue * p,...);
 FUNCTIONALITY void sclearvaluels(int c,void * s,SValue * ls);
 FUNCTIONALITY void sfreevalue(SValue *);
 FUNCTIONALITY SValue scopyvalue(SValue par);
 
-// primitive operators
-FUNCTIONALITY SValue sprim_sum(SValue,SValue);
-FUNCTIONALITY SValue sprim_difference(SValue,SValue);
-FUNCTIONALITY SValue sprim_product(SValue,SValue);
-FUNCTIONALITY SValue sprim_numEqual(SValue,SValue);
+
 
 // constructors
 FUNCTIONALITY SValue MakeSInt(int n); 
@@ -109,13 +104,6 @@ FUNCTIONALITY void slinsert(sfunctions ** ls,int label);
 FUNCTIONALITY bool slhas(sfunctions * ls,int label);
 
 
-// details
-FUNCTIONALITY char * stostring (SValue par,bool outer);
-FUNCTIONALITY char * sgeneratestring(char * start,int c,SValue v,...);
-FUNCTIONALITY char * sgenerateseqstring(char * start,int c,SValue * ls,char * del);
-
-
-
 /*-----------------------------------------------------------------------------
  *  Types
  *-----------------------------------------------------------------------------*/
@@ -152,7 +140,13 @@ FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s);
 FUNCTIONALITY limbo applykont(SValue val,skont  k,state * s);
 FUNCTIONALITY SValue evalatom(SValue atom,senviron * htbl,memory mem);
 FUNCTIONALITY bool isatom(SValue el);
-FUNCTIONALITY void debugstate(state * s);
+
+/*-----------------------------------------------------------------------------
+ *  Debug
+ *-----------------------------------------------------------------------------*/
+
+#ifdef DEBUG
+LOCAL void debugstate(state * s);
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -160,16 +154,16 @@ FUNCTIONALITY void debugstate(state * s);
  *  Description:    print the current cesk state
  * =====================================================================================
  */
-FUNCTIONALITY void debugstate(state * s){
+LOCAL void debugstate(state * s){
     DEBUG_PRINT(("==========================")) 
     DEBUG_PRINT(("** CONTROL")) 
 
-    char * ctrl = stostring(s->control,false);
+    char * ctrl = N(tostring)(s->control,false);
     DEBUG_PRINT((ctrl)) 
     free(ctrl);
     DEBUG_PRINT(("** STORES : %d",s->free_adr)) 
     for(int i = 0; i < s->free_adr; i++){
-        char * str =  stostring(s->storage[i],false);
+        char * str =  N(tostring)(s->storage[i],false);
         DEBUG_PRINT(("%d == %s",i,str))
         free(str);
     }
@@ -181,7 +175,7 @@ FUNCTIONALITY void debugstate(state * s){
     }
     DEBUG_PRINT(("** CONTINUATION")) 
     SValue cc = MakeSContinuation(s->continuation);
-    DEBUG_PRINT((" --> cont type %s",stostring(cc,false)))
+    DEBUG_PRINT((" --> cont type %s",N(tostring)(cc,false)))
 
     DEBUG_PRINT(("** FUNCTIONS")) 
     sfunctions * snode = s->functions;
@@ -192,299 +186,7 @@ FUNCTIONALITY void debugstate(state * s){
     DEBUG_PRINT(("==========================")) 
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sgeneratestring
- *  Description:    do internal work
- * =====================================================================================
- */
-FUNCTIONALITY char * sgeneratestring(char * start,int c,SValue v,...){
-    va_list arguments;
-    va_start(arguments, v); 
-
-    int sstart = strlen(start);
-    char ** list = (char **) malloc(c*(sizeof(char *)));
-
-    list[0] = stostring(v,false);
-    sstart   += strlen(list[0]);
-
-    for(int i = 1; i < c; ++i ){
-        list[i]   = stostring(va_arg(arguments,SValue),false);
-        sstart   += strlen(list[i]);
-    }
-
-    char * str = (char *) malloc(sizeof(char) * (sstart+(c-1)+2));
-    str[0] ='\0';
-    strcat(str,start);
-
-    for(int i = 0; i <c ; ++i){
-        strcat(str,list[i]);     
-        if(i == c-1) {}
-        else{ strcat(str,",");}
-    }
-
-    strcat(str,")");
-
-    for(int i = 0; i < c ; i++){
-        free(list[i]);
-    }
-    free(list);
-    va_end(arguments);
-    return str;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sgenerateseqstring
- *  Description:    do internal work
- * =====================================================================================
- */
-FUNCTIONALITY char * sgenerateseqstring(char * start,int c,SValue * ls,char * del){
-    int sstart = strlen(start);
-    if(c > 0){
-        char ** args = (char **) malloc(c * (sizeof (char *)));
-        for(int i = 0; i < c; i++){
-            args[i] = stostring(ls[i],false);
-            sstart  += strlen(args[i]);
-        }
-        sstart += ((c-1) * strlen(del)) + 2; 
-        char * str = (char *) malloc(sizeof(char) * (sstart));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < c; i++){
-            strcat(str,args[i]);
-            if(! (i+1 == c)) strcat(str,del);
-        }
-        strcat(str,")");
-        for(int i = 0; i < c; i++){
-            free(args[i]);
-        }
-        free(args);
-
-        return str;
-    } 
-
-    char * str = (char *) malloc(sizeof(char) * (sstart+2));
-    str[0] ='\0';
-    strcat(str,start);
-    strcat(str,")"); 
-
-    return str;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    stostring
- *  Description:    conver Value into string, used to debug
- * =====================================================================================
- */
-FUNCTIONALITY char * stostring (SValue par,bool outer){
-    
-    switch(par.tt){ 
-    
-        case SVOID : {
-            char * str = (char *) malloc(5 * sizeof(char));
-            str[0] = '\0';
-            strcat(str,"void");
-            return str;
-        }
-        case SUNDEF : {
-            char * str = (char *) malloc(6 * sizeof(char));
-            str[0] = '\0';
-            strcat(str,"undef");
-            return str;
-        }
-
-    }
-
-    switch(par.b->t){
-
-    case SINT : {
-        int stringsize = 2;
-        if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 2);   
-        char * str = (char *) malloc(sizeof(char) * stringsize);
-        sprintf(str,"%d",par.z->value);
-        return str;
-    }
-
-    case SBOOLEAN : {
-        char * str = (char *) malloc(3 * sizeof(char));
-        sprintf(str,"%s",par.b->value ? "#t" : "#f");
-        return str;
-    }
-     
-    case SSYMBOL : {
-        char * str  =(char *) malloc(sizeof(char) * (strlen(par.s->name) + 1 + (outer ? 1 : 0)));
-        if(outer) strcat(str,"'"); else str[0] = '\0';
-        strcat(str,par.s->name);
-        return str;
-    }
-
-
-    // Different from insecure
-    case SI :{
-        char * si = "(SI "; 
-        char * cont = tostring(par.i->arg,false);
-        int start = strlen(si)+3+strlen(cont);
-        char * str = (char *) malloc(sizeof(char) * start); 
-        sprintf(str,"%s%s)",si,cont);
-        return str;
-    }
-
-    case SLAM : {
-        char * start = "(λ ";
-        int sstart = strlen(start);
-        char * body = stostring(par.l->body,false);  
-        int sbody    = strlen(body);
-        char ** args = (char **) malloc(par.l->nargs * (sizeof (char *)));
-        int sargs    =  0;
-        for(int i = 0; i < par.l->nargs; i++){
-            args[i] = stostring(par.l->arguments[i],false);
-            sargs  += strlen(args[i]);
-        }
-        char * str = (char *) malloc(sizeof(char) * (sstart+sargs+(par.l->nargs -1) + 4 + sbody+ 2));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < par.l->nargs; i++){
-            strcat(str,args[i]);
-            if(! (i+1 == par.l->nargs)) strcat(str,",");
-        }
-        strcat(str," in ");
-        strcat(str,body);
-        strcat(str,")");
-        free(body);
-        for(int i = 0; i < par.l->nargs; i++){
-            free(args[i]);
-        }
-        free(args);
-        return str;
-    }
-
-    case SPRIM : 
-        if(par.p->exec == sprim_sum) 
-            return sgenerateseqstring("(+ ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == sprim_product)
-            return sgenerateseqstring("(* ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == sprim_difference)
-            return sgenerateseqstring("(- ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == sprim_numEqual)
-            return sgenerateseqstring("(= ",par.p->nargs,par.p->arguments," "); 
-
-    case SAPPLICATION : 
-        return sgenerateseqstring("(-> ",par.a->nargs,par.a->arguments," ");
-
-    case SIF :
-        return sgeneratestring("(if ",3,par.f->cond,par.f->cons,par.f->alt);
-    
-    case SCLOSURE :
-        return sgeneratestring("#clo(",1,par.c->lambda);
-    
-    case SCONTINUATION :{
-        char * str = (char *) malloc(5 * sizeof(char));
-        char * insert;
-        if(par.k->kstar.empty != NULL){
-        switch(par.k->kstar.l->t){
-            case SKLET :
-                insert = "LETC";
-                break;
-            case SKRET :
-                insert = "RETC";
-                break;
-            case SKCONTINUE:
-                insert = "CONT";
-
-            default :
-                insert = "ERRO";
-        }}else{ insert = "NULL";}
-        sprintf(str,"%s",insert);
-        return str;
-    }
-    
-    case SCALLCC :
-        return sgeneratestring("(call/cc ",1,par.cc->function);
-    
-    case  SSET :
-        return sgeneratestring("(set ",2,par.sv->var,par.sv->value);
-    
-    case SLET :
-        return sgeneratestring("(let ",3,par.lt->var,par.lt->expr,par.lt->body);
-    
-    case SLETREC : {
-        char * start = "letrec([";
-        int sstart = strlen(start);
-        char * body = stostring(par.lr->body,false);  
-        sstart   += strlen(body);
-        char ** args = (char **) malloc(par.lr->nargs * (sizeof (char *)));
-        char ** args2 = (char **) malloc(par.lr->nargs * (sizeof (char *)));
-        for(int i = 0; i < par.lr->nargs; i++){
-            args[i] = stostring(par.lr->vars[i],false);
-            args2[i] = stostring(par.lr->exprs[i],false);
-            sstart  += strlen(args[i]) + strlen(args2[i]);
-        }
-        sstart += (par.lr->nargs * 3) + (par.lr->nargs -1);
-        char * str = (char *) malloc(sizeof(char) * (sstart + 7));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < par.lr->nargs; i++){
-            strcat(str,"(");
-            strcat(str,args[i]);
-            strcat(str,",");
-            strcat(str,args2[i]);
-            strcat(str,")");
-
-            if(! (i+1 == par.lr->nargs)) strcat(str,",");
-        }
-        strcat(str,"] in ");
-        strcat(str,body);
-        strcat(str,")");
-        free(body);
-
-        for(int i = 0; i < par.a->nargs; i++){
-            free(args[i]);
-            free(args2[i]);
-        }
-
-        free(args);
-        free(args2);
-
-        return str;
-    }
-    case SBEGIN :
-        return sgenerateseqstring("(begin ",par.bg->nargs,par.bg->stmts," ");
-    
-    case SCAR :
-        return sgeneratestring("(car ",1,par.car->arg);
-    
-    case SCDR :
-        return sgeneratestring("(cdr ",1,par.cdr->arg);
-    
-    case SCONS :
-        return sgeneratestring("(cons ",2,par.cons->arg,par.cons->arg2);
-    
-    case SLIST : 
-        if(par.ls->islist) 
-            return sgenerateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," ");
-        return sgenerateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," . ");
-    
-    case SQUOTE :
-        return sgeneratestring("(quote ",1,par.q->arg);
-   
-    case SPAIRQ :
-        return sgeneratestring("(pair? ",1,par.pq->arg);
-    
-    case SLISTQ :
-        return sgeneratestring("(list? ",1,par.lq->arg);
-
-    case SNULLQ :
-        return sgeneratestring("(null? ",1,par.nq->arg);
-
-    case SDEFINE :
-        return sgeneratestring("(define ",2,par.d->var,par.d->expr);
-
-    default :
-        DEBUG_PRINT(("Could not convert Value to string!!!")) 
-        return NULL;
-}}
+#endif
 
 
 /* 
@@ -796,7 +498,7 @@ FUNCTIONALITY void sfreevalue(SValue * par){
  *  Description:    sum operation
  * =====================================================================================
  */
-FUNCTIONALITY SValue sprim_sum(SValue a, SValue b) {
+FUNCTIONALITY SValue N(prim_sum)(SValue a, SValue b) {
     return MakeSInt(a.z->value + b.z->value) ;
 }
 
@@ -806,7 +508,7 @@ FUNCTIONALITY SValue sprim_sum(SValue a, SValue b) {
  *  Description:    product operation
  * =====================================================================================
  */
-FUNCTIONALITY SValue sprim_product(SValue a, SValue b) {
+FUNCTIONALITY SValue N(prim_product)(SValue a, SValue b) {
     return MakeSInt(a.z->value * b.z->value) ;
 }
 
@@ -816,7 +518,7 @@ FUNCTIONALITY SValue sprim_product(SValue a, SValue b) {
  *  Description:    difference operation
  * =====================================================================================
  */
-FUNCTIONALITY SValue sprim_difference(SValue a, SValue b) {
+FUNCTIONALITY SValue N(prim_difference)(SValue a, SValue b) {
     return MakeSInt(a.z->value - b.z->value) ;
 }
 
@@ -826,7 +528,7 @@ FUNCTIONALITY SValue sprim_difference(SValue a, SValue b) {
  *  Description:    equal operation
  * =====================================================================================
  */
-FUNCTIONALITY SValue sprim_numEqual(SValue a, SValue b) {
+FUNCTIONALITY SValue N(prim_numEqual)(SValue a, SValue b) {
     return MakeSBoolean(a.z->value == b.z->value) ;
 }
 
@@ -1669,7 +1371,7 @@ FUNCTIONALITY limbo applykont(SValue val,skont k,state * s)
  * =====================================================================================
  */
 FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s){
-    DEBUG_PRINT(("CALL PROCEDURE %s",stostring(proc,false)))
+    DEBUG_PRINT(("CALL PROCEDURE %s",N(tostring)(proc,false)))
 	if(proc.c->t == SCLOSURE){
 
         int curr = s->free_adr;
@@ -1685,7 +1387,7 @@ FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s){
 
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < s->free_adr ;j++){
-            DEBUG_PRINT(("Proc %d == %s",i,stostring((args[i]),false)))
+            DEBUG_PRINT(("Proc %d == %s",i,N(tostring)((args[i]),false)))
             s->storage[j] = scopyvalue(args[i]); // MEM : Don't clear
             i++;
         }
@@ -1955,7 +1657,9 @@ FUNCTIONALITY answer steprec (state * s){
     static int i = 0;
     DEBUG_PRINT(("STEP# == %d of Secure",++i))
     int log = i;
-    debugstate(s);
+    #ifdef DEBUG
+        debugstate(s);
+    #endif
     limbo result = step(s); 
     if(result.computation == NULL){
         DEBUG_PRINT(("DONE Secure STEP#== %d",log))

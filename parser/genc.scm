@@ -35,10 +35,10 @@
 ;prim to string
 (define (prim->string prim in)
   (match prim
-    ['+    (if in "prim_sum" "sprim_sum")]
-    ['-    (if in "prim_difference" "sprim_difference")]
-    ['*    (if in "prim_product" "sprim_product")]
-    ['=    (if in "prim_numEqual" "sprim_numEqual")]))
+    ['+    (if in "prim_sum" "N(prim_sum)")]
+    ['-    (if in "prim_difference" "N(prim_difference)")]
+    ['*    (if in "prim_product" "N(prim_product)")]
+    ['=    (if in "prim_numEqual" "N(prim_numEqual)")]))
 
 
 ; how to parse single syntax units

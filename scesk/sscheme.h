@@ -1,10 +1,10 @@
 #ifndef SCHEMES_INCLUDED
 #define SCHEMES_INCLUDED
 
-#include <stdbool.h>
+#include <stdbool.h> // TODO if SPM ?
 #include <stdio.h>
 #include "global.h"
-#include "scheme.h"
+#include "scheme.h" // TODO resolve
 
 /*-----------------------------------------------------------------------------
  *  Macro's
@@ -19,12 +19,6 @@
                       MEM(N) \
                       _SCM
 
-#ifdef DEBUG
-#include <assert.h>
-# define DEBUG_PRINT(x) printf("DEBUG:: "); printf x ; printf("\n");fflush(stdout);
-#else
-# define DEBUG_PRINT(x) do {} while (0);
-#endif
 
 
 /*-----------------------------------------------------------------------------
@@ -243,5 +237,10 @@ typedef struct sfunctions_t{
 // simplifications
 typedef union SValue SValue ;
 
+// TODO Remove
+FUNCTIONALITY SValue N(prim_sum)(SValue,SValue);
+FUNCTIONALITY SValue N(prim_difference)(SValue,SValue);
+FUNCTIONALITY SValue N(prim_product)(SValue,SValue);
+FUNCTIONALITY SValue N(prim_numEqual)(SValue,SValue);
 
 #endif

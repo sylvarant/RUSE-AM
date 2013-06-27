@@ -19,7 +19,7 @@
 
 
 /*-----------------------------------------------------------------------------
- *  Preprocessor
+ *  Modifiers
  *-----------------------------------------------------------------------------*/
 
 #ifdef SANCUS_SPM
@@ -42,7 +42,6 @@
 #else 
 
     // Default
-
     #define LOCAL static
     #define SECRET_DATA static
     #define FUNCTIONALITY extern
@@ -50,6 +49,28 @@
 
 #endif
 
+
+/*-----------------------------------------------------------------------------
+ *  Naming
+ *-----------------------------------------------------------------------------*/
+
+// add S to methods in this case
+#define N(NAME) S##NAME
+
+// add nothing to access the Other
+#define OTHERN(NAME) NAME
+
+// Secure uses SVALUEs
+#define VALUE SValue
+#define OTHERVALUE Value
+
+
+/*-----------------------------------------------------------------------------
+ *  Memory
+ *-----------------------------------------------------------------------------*/
+
+#define MALLOC malloc // TODO adapt
+#define OTHERMALLOC malloc
 
 #endif
 

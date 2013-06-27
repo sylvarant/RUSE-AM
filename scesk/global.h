@@ -18,10 +18,9 @@
 #include "secure_macro.h"
 
 /*-----------------------------------------------------------------------------
- *  Preprocessor
+ *  DEBUGGING
  *-----------------------------------------------------------------------------*/
 
-// When in DEBUG mode log the current events
 #ifdef DEBUG
     #include <stdio.h>
     # define DEBUG_PRINT(x) printf("DEBUG:: "); printf x ; printf("\n");fflush(stdout);
@@ -35,6 +34,9 @@
  *-----------------------------------------------------------------------------*/
 ENTRYPOINT void * secure_eval(int seccode);
 ENTRYPOINT void sload (void);
+
+
+
 
 //TODO at insecure Entrypoints
 

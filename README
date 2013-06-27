@@ -1,0 +1,22 @@
+Directory structure
+===============
+- test/ : test cases
+- parser/ : parser
+- fides/ : fides headers and perl generators -- requires Fides support 
+- cesk/ : implementation of the CESK machine
+- scesk/ : implementation of the 2/S CESK machine
+- buildsrc/ : all files used to build the executable
+- bin/ : the executable and binary spm's
+- doc/ : documentation used to build the machine
+
+Executing
+==================
+./ruse [-idfvwsc] sourcefile
+
+Testing 
+==================
+./testruse
+
+Specification
+==================
+language-spec

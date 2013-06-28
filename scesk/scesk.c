@@ -20,7 +20,6 @@
  *  Preprocessor
  *-----------------------------------------------------------------------------*/
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "sscheme.h"
@@ -53,12 +52,6 @@
  *  Functions
  *-----------------------------------------------------------------------------*/
 // functionality
-FUNCTIONALITY void sclearvalue(int c,void * s,SValue * p,...);
-FUNCTIONALITY void sclearvaluels(int c,void * s,SValue * ls);
-FUNCTIONALITY void sfreevalue(SValue *);
-FUNCTIONALITY SValue scopyvalue(SValue par);
-
-
 
 // constructors
 FUNCTIONALITY SValue MakeSInt(int n); 
@@ -93,7 +86,6 @@ FUNCTIONALITY SValue MakeSClosure(SValue atom, senviron * htbl);
 FUNCTIONALITY SValue MakeSUndef(void);
 FUNCTIONALITY int sinsert(senviron *table,char *key,int value);
 FUNCTIONALITY int sget(senviron *table,const char *key);
-FUNCTIONALITY void semptyenv(senviron * table);
 FUNCTIONALITY senviron * scopyenv(senviron * table);
 FUNCTIONALITY struct skeylist * skeylist(senviron * table);
 FUNCTIONALITY void inject (void);
@@ -274,25 +266,7 @@ FUNCTIONALITY void slinsert(sfunctions ** ls,int label){
     *ls        = node;
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    semptyenv
- *  Description:    clear out the memory
- * =====================================================================================
- */
-FUNCTIONALITY void semptyenv(senviron * table){
 
-    struct senvnode *node;
-    struct senvnode *nnode;
-    node = table->bucket;
-    nnode = node;
-
-    while(node) {
-        node = node->next;
-        free(nnode);
-        nnode = node;
-    }
-}
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -354,143 +328,6 @@ FUNCTIONALITY struct skeylist * skeylist(senviron * tbl){
     return kl;
 }
 
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sclearvalue
- *  Description:    clear a certain type value
- * =====================================================================================
- */
-FUNCTIONALITY void sclearvalue(int c,void * s,SValue * p,...){
-
-    va_list arguments;
-    va_start(arguments, p); 
-
-    sfreevalue(p);
-    for(int i = 1; i < c; ++i ){
-        sfreevalue(va_arg(arguments,SValue *));
-    }
-    free(s); 
-    va_end(arguments);
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sclearvalue*
- *  Description:    clear SValues made of sequences
- * =====================================================================================
- */
-FUNCTIONALITY void sclearvaluels(int c,void * s,SValue * ls){
-    for(int i = 0 ; i < c ; i++){
-       sfreevalue(&ls[i]);
-    }
-    if(ls != NULL) free(ls);
-    free(s);
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sfreevalue
- *  Description:    free a value
- * =====================================================================================
- */
-FUNCTIONALITY void sfreevalue(SValue * par){
-
-    switch(par->tt){
-        case SVOID:
-        case SUNDEF:
-            return;
-    }
-
-    switch(par->b->t){
-    
-    case SINT :  
-        return free(par->z);
-    
-    case SI : 
-        return free(par->i);
-       
-    case SBOOLEAN : 
-        return; //free(par->b);
-
-    case SLAM :
-        sfreevalue(&par->l->body);
-        return sclearvaluels(par->l->nargs,par->l,par->l->arguments);
-    
-    case SPRIM :
-        return sclearvaluels(par->p->nargs,par->p,par->p->arguments);
-
-    case SSYMBOL :
-        return free(par->s);
-
-    case SAPPLICATION :
-        return sclearvaluels(par->a->nargs,par->a,par->a->arguments);
-
-    case SIF :
-        return sclearvalue(3,par->f,&par->f->cond,&par->f->cons,&par->f->alt);
-    
-    case SCLOSURE :
-        semptyenv(par->c->env);
-        free(par->c->env);
-        return sclearvalue(1,par->c,&(par->c->lambda));
-
-    case SCONTINUATION :
-        return free(par->k);
-    
-    case SCALLCC :
-        return sclearvalue(1,par->cc,&par->cc->function);     
-    
-    case SSET :
-        return sclearvalue(2,par->sv,&par->sv->var,&par->sv->value);
-    
-    case SLET :
-        return sclearvalue(3,par->lt,&par->lt->var,&par->lt->expr,&par->lt->body);
-    
-    case SLETREC :
-        sfreevalue(&par->lr->body);
-        for(int i = 0; i < par->lr->nargs; i++){
-            sfreevalue(&par->lr->vars[i]);
-            sfreevalue(&par->lr->exprs[i]);
-        }
-        free(par->lr->vars);
-        free(par->lr->exprs);
-        return free(par->lr);
-    
-    case SBEGIN :
-        return sclearvaluels(par->bg->nargs,par->bg,par->bg->stmts);
-    
-    case SCAR :
-        return sclearvalue(1,par->car,&par->car->arg); 
-    
-    case SCDR :
-        return sclearvalue(1,par->cdr,&par->cdr->arg); 
-    
-    case SCONS :
-        return sclearvalue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
-    
-    case SLIST :
-        return sclearvaluels(par->ls->nargs,par->ls,par->ls->args);
-    
-    case SQUOTE :
-        return sclearvalue(1,par->q,&par->q->arg); 
-    
-    case SPAIRQ :
-        return sclearvalue(1,par->pq,&par->pq->arg); 
-    
-    case SLISTQ :
-        return sclearvalue(1,par->lq,&par->lq->arg); 
-
-    case SNULLQ :
-        return sclearvalue(1,par->nq,&par->nq->arg); 
-
-    case SDEFINE :
-        return sclearvalue(2,par->d,&par->d->var,&par->d->expr);
-
-    default :
-        DEBUG_PRINT(("Could not clear SValue !!!")) 
-        return;
-    
-}}
 
 /* 
  * ===  FUNCTION  ======================================================================

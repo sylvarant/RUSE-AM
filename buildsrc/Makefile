@@ -13,7 +13,7 @@ NAME= ../bin/exec
 CSOURCES= $(shell find *.c | sed -e "s/\.c/.o/")
 
 
-CFLAGS= -g $(DEBOPT) $(CWARNFLAGS) -std=gnu99 
+CFLAGS= -g $(DEBOPT) $(CWARNFLAGS) -std=gnu99 -DSECURE # TODO parameterize
 
 all: $(CSOURCES) link
 

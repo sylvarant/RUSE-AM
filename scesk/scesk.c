@@ -82,12 +82,8 @@ FUNCTIONALITY SValue MakeSI(Value v);
 
 // Internal magic
 FUNCTIONALITY SValue MakeSContinuation(skont kstar);
-FUNCTIONALITY SValue MakeSClosure(SValue atom, senviron * htbl);
+FUNCTIONALITY SValue MakeSClosure(SValue atom, N(environ) * htbl);
 FUNCTIONALITY SValue MakeSUndef(void);
-FUNCTIONALITY int sinsert(senviron *table,char *key,int value);
-FUNCTIONALITY int sget(senviron *table,const char *key);
-FUNCTIONALITY senviron * scopyenv(senviron * table);
-FUNCTIONALITY struct skeylist * skeylist(senviron * table);
 FUNCTIONALITY void inject (void);
 
 
@@ -106,7 +102,7 @@ typedef SValue * memory;
 // CESK State
 typedef struct state_t{
     SValue control;
-    senviron * environment; 
+    N(environ) * environment; 
     memory storage;
     skont continuation;
     sfunctions * functions;
@@ -130,7 +126,7 @@ FUNCTIONALITY answer steprec (state * s);
 FUNCTIONALITY limbo step(state * s);
 FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s);
 FUNCTIONALITY limbo applykont(SValue val,skont  k,state * s);
-FUNCTIONALITY SValue evalatom(SValue atom,senviron * htbl,memory mem);
+FUNCTIONALITY SValue evalatom(SValue atom,N(environ) * htbl,memory mem);
 FUNCTIONALITY bool isatom(SValue el);
 
 /*-----------------------------------------------------------------------------
@@ -183,60 +179,6 @@ LOCAL void debugstate(state * s){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    sget
- *  Description:    return an element 
- * =====================================================================================
- */
-FUNCTIONALITY int sget(senviron *table,const char *key)
-{
-    struct senvnode *node;
-    node = table->bucket;
-    while(node) {
-        if(strcmp(key,node->key) == 0)
-            return node->value;
-        node = node->next;
-    }
-    return (-1);
-}
-
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sinsert
- *  Description:    add something to environment
- * =====================================================================================
- */
-FUNCTIONALITY int sinsert(senviron *table,char *key,int value)
-{
-    struct senvnode **tmp;
-    struct senvnode *node ;
-
-    tmp = &table->bucket;
-    while(*tmp) {
-        if(strcmp(key,(*tmp)->key) == 0)
-            break;
-        tmp = &(*tmp)->next;
-    }
-    if(*tmp) { 
-        node = *tmp;
-    } else {
-        node = malloc(sizeof *node);
-        if(node == NULL)
-            return -1;
-        node->next = NULL;
-        *tmp = node;
-
-        table->size++;
-
-    }
-    node->key = key;
-    node->value = value;
-
-    return 0;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
  *         Name:    slhas
  *  Description:    has element ?
  * =====================================================================================
@@ -264,68 +206,6 @@ FUNCTIONALITY void slinsert(sfunctions ** ls,int label){
     node->next  = *ls;
     node->label = label;
     *ls        = node;
-}
-
-
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    scopyenv
- *  Description:    copy the env
- * =====================================================================================
- */
-FUNCTIONALITY senviron * scopyenv(senviron * table){
-    senviron * new = (senviron *) malloc(sizeof(senviron));
-    new->size = table->size;
-
-    struct senvnode *node;
-    struct senvnode *nnode;
-    node = table->bucket;
-    new->bucket = (struct senvnode *) malloc(sizeof(struct senvnode)); 
-
-    nnode =  new->bucket;
-	struct senvnode * dumb = nnode;
-    while(node != NULL) {
-        nnode->key             = node->key;
-        nnode->value           = node->value;
-        nnode->next            = (struct senvnode *) malloc(sizeof(struct senvnode)); 
-        node = node->next;
-		dumb = nnode;
-        nnode = nnode->next;
-    }
-
-	if(dumb != nnode){
-		dumb->next = NULL;
-	}else{
-		new->bucket = NULL;
-	}
-    free(nnode);
-
-    return new;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    skeylist
- *  Description:    return a list of all keys
- * =====================================================================================
- */
-FUNCTIONALITY struct skeylist * skeylist(senviron * tbl){
-    struct skeylist * kl = (struct skeylist *) malloc(sizeof(struct skeylist));
-
-    struct senvnode *node;
-    node = tbl->bucket;
-
-    while(node) {
-        kl->key      = node->key;
-        kl->next  = (struct skeylist *) malloc(sizeof(struct skeylist));
-        node = node->next;
-        kl = kl->next;
-    }
-    free(kl);
-    kl = NULL;
-
-    return kl;
 }
 
 
@@ -540,14 +420,14 @@ FUNCTIONALITY SValue MakeSSymbol(char * name){
  *  Description:    create a SClosure
  * =====================================================================================
  */
-FUNCTIONALITY SValue MakeSClosure(SValue atom, senviron * htbl){
+FUNCTIONALITY SValue MakeSClosure(SValue atom, N(environ) * htbl){
         SValue clos;
           
         struct SClosure * data = (struct SClosure*) malloc(sizeof(struct SClosure));
         clos.c = data;
         clos.c->t      = SCLOSURE;
         clos.c->lambda = atom;
-        clos.c->env = scopyenv(htbl);
+        clos.c->env = N(copyenv)(htbl);
 
 		return clos;
 }
@@ -997,7 +877,7 @@ FUNCTIONALITY bool isatom(SValue el)
  *  Todo       :    implement primitives
  * =====================================================================================
  */
-FUNCTIONALITY SValue evalatom(SValue atom,senviron * htbl,memory mem){
+FUNCTIONALITY SValue evalatom(SValue atom,N(environ) * htbl,memory mem){
 
     switch(atom.tt){
 
@@ -1009,11 +889,11 @@ FUNCTIONALITY SValue evalatom(SValue atom,senviron * htbl,memory mem){
     switch(atom.b->t){
 
     case SSYMBOL :{
-        int adress = (int) sget(htbl,(const char *) atom.s->name); 
+        int adress = (int) N(get)(htbl,(const char *) atom.s->name); 
         if(adress == -1){ 
             DEBUG_PRINT(("Storage failure for %s",atom.s->name))
             DEBUG_PRINT(("ENVIRONMENT : %d",htbl->size)) 
-            struct senvnode *node = htbl->bucket;
+            struct N(envnode) *node = htbl->bucket;
             while(node){
                 DEBUG_PRINT(("%s at %d ",node->key,node->value))
                 node = node->next;
@@ -1079,7 +959,7 @@ FUNCTIONALITY SValue evalatom(SValue atom,senviron * htbl,memory mem){
         kk.c    = malloc(sizeof(struct scont_kont));
         kk.c->t = SKCONTINUE;
         kk.c->next = mystate->continuation;
-        kk.c->e = scopyenv(mystate->environment);
+        kk.c->e = N(copyenv)(mystate->environment);
         mystate->continuation = kk;
 
         Value ptr = evaluate((atom.i->arg)); 
@@ -1169,7 +1049,7 @@ FUNCTIONALITY limbo applykont(SValue val,skont k,state * s)
 
         case SKLET : { // KOONT
             struct slet_kont * lk = k.l; 
-            sinsert(lk->e,lk->var.s->name,s->free_adr);
+            N(insert)(lk->e,lk->var.s->name,s->free_adr);
 		    s->storage[s->free_adr] = scopyvalue(val); // MEM : Don't clear  
 		    s->free_adr++;
             //sfreevalue(&s->control);  
@@ -1218,7 +1098,7 @@ FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s){
 
 		// update enviroment with new adresses for each variable of lambda
         for(int j = curr,i = 0; j < s->free_adr ;j++){
-            sinsert(proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
+            N(insert)(proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
             i++;
         }
 
@@ -1230,7 +1110,7 @@ FUNCTIONALITY limbo applyproc(SValue proc,SValue * args,state *s){
         }
         
 		// create new state with updated storage and envorinment, control = body of lambda
-        s->environment = scopyenv(proc.c->env);
+        s->environment = N(copyenv)(proc.c->env);
         SValue cpy = scopyvalue(proc.c->lambda.l->body);
         //sfreevalue(&s->control);
         s->control = cpy; 
@@ -1302,7 +1182,7 @@ FUNCTIONALITY limbo step(state * s)
 
     case SSET : {
         SValue val = evalatom(s->control.sv->value,s->environment,s->storage);
-        int adress = (int) sget(s->environment,(const char *) s->control.sv->var.s->name); 
+        int adress = (int) N(get)(s->environment,(const char *) s->control.sv->var.s->name); 
         FREECELL((s->storage[adress]))
         s->storage[adress] = scopyvalue(val); // MEM 
         SValue empty = {0};
@@ -1311,13 +1191,13 @@ FUNCTIONALITY limbo step(state * s)
 
     case SDEFINE : {
         if( s->control.d->var.s->t != SYMBOL) {DEBUG_PRINT(("Expected Symbol !!")) exit(1);}
-        int test = (int) sget(s->environment,(const char *) s->control.d->var.s->name); 
+        int test = (int) N(get)(s->environment,(const char *) s->control.d->var.s->name); 
         if(test == -1){ 
-            sinsert(s->environment,(const char *)s->control.d->var.s->name,s->free_adr++);
+            N(insert)(s->environment,(const char *)s->control.d->var.s->name,s->free_adr++);
         }        
         // once binding exists preform set
         SValue val = evalatom(s->control.d->expr,s->environment,s->storage);
-        int adress = (int) sget(s->environment,(const char *) s->control.d->var.s->name); 
+        int adress = (int) N(get)(s->environment,(const char *) s->control.d->var.s->name); 
         FREECELL((s->storage[adress]))
         s->storage[adress] = scopyvalue(val); // MEM
         SValue empty = {0};
@@ -1351,7 +1231,7 @@ FUNCTIONALITY limbo step(state * s)
         s->free_adr = curr + nargs; 
 		// update enviroment with new adresses for each variable of lambda
         for(int j = curr,i = 0; j < s->free_adr ;j++){
-            sinsert(s->environment,(const char *)s->control.lr->vars[i].s->name,j); 
+            N(insert)(s->environment,(const char *)s->control.lr->vars[i].s->name,j); 
             i++;
         }
         SValue * list = (SValue*) malloc(s->control.lr->nargs * (sizeof(SValue)));
@@ -1516,12 +1396,12 @@ FUNCTIONALITY answer steprec (state * s){
  */
 FUNCTIONALITY void inject (){
 
-    static senviron tbl = {NULL,0};
+    static N(environ) tbl = {NULL,0};
 
     if(mystate != NULL) { free(mystate); }
 
     // create empty environment -- tested
-    senviron * envtable = (senviron *) malloc(sizeof(senviron));  
+    N(environ) * envtable = MALLOC (sizeof(N(environ)));  
     *envtable = tbl;
 
     // inject state

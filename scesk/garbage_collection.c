@@ -26,7 +26,7 @@
 
 LOCAL void clearvalue(int c,void * s,VALUE * p,...);
 LOCAL void clearvaluels(int c,void * s,VALUE * ls);
-LOCAL void emptyenv(N(environ) * env);
+LOCAL void N(emptyenv)(N(environ) * env); // TODO remove
 
 
 /* 
@@ -52,7 +52,7 @@ LOCAL void clearvalue(int c,void * s,VALUE * p,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    sclearvalue*
+ *         Name:    clearvaluels
  *  Description:    clear VALUE with a list of c subvalues 
  *                  TODO merge with other ?
  * =====================================================================================
@@ -75,7 +75,7 @@ LOCAL void clearvaluels(int c,void * s,VALUE * ls){
  *                      references to language descriptors
  * =====================================================================================
  */
-LOCAL void emptyenv(N(environ) * table){
+LOCAL void N(emptyenv)(N(environ) * table){
 
     struct N(envnode) *node;
     struct N(envnode) *nnode;
@@ -99,7 +99,7 @@ LOCAL void emptyenv(N(environ) * table){
  *                  statically !
  * =====================================================================================
  */
-FUNCTIONALITY void sfreevalue(VALUE * par){
+FUNCTIONALITY void N(freevalue)(VALUE * par){
 
     
     switch(par->tt){
@@ -139,7 +139,7 @@ FUNCTIONALITY void sfreevalue(VALUE * par){
             return clearvalue(3,par->f,&par->f->cond,&par->f->cons,&par->f->alt);
     
         case N(CLOSURE) : {
-            emptyenv(par->c->env);
+            N(emptyenv)(par->c->env);
             free(par->c->env);
             return clearvalue(1,par->c,&(par->c->lambda));
         }
@@ -156,50 +156,50 @@ FUNCTIONALITY void sfreevalue(VALUE * par){
         case N(LET) :
             return clearvalue(3,par->lt,&par->lt->var,&par->lt->expr,&par->lt->body);
     
-        case N(LETREC) :
-        sfreevalue(&par->lr->body);
-        for(int i = 0; i < par->lr->nargs; i++){
-            N(freevalue)(&par->lr->vars[i]);
-            N(freevalue)(&par->lr->exprs[i]);
+        case N(LETREC) :{
+            N(freevalue)(&par->lr->body);
+            for(int i = 0; i < par->lr->nargs; i++){
+                N(freevalue)(&par->lr->vars[i]);
+                N(freevalue)(&par->lr->exprs[i]);
+            }
+            free(par->lr->vars);
+            free(par->lr->exprs);
+            return free(par->lr);
         }
-        free(par->lr->vars);
-        free(par->lr->exprs);
-        return free(par->lr);
+
+        case N(BEGIN) :
+            return clearvaluels(par->bg->nargs,par->bg,par->bg->stmts);
     
-    case N(BEGIN) :
-        return clearvaluels(par->bg->nargs,par->bg,par->bg->stmts);
+        case N(CAR) :
+            return clearvalue(1,par->car,&par->car->arg); 
     
-    case N(CAR) :
-        return clearvalue(1,par->car,&par->car->arg); 
-    
-    case N(CDR) :
+        case N(CDR) :
         return clearvalue(1,par->cdr,&par->cdr->arg); 
     
-    case N(CONS) :
-        return clearvalue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
+        case N(CONS) :
+            return clearvalue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
     
-    case N(LIST) :
-        return clearvaluels(par->ls->nargs,par->ls,par->ls->args);
+        case N(LIST) :
+            return clearvaluels(par->ls->nargs,par->ls,par->ls->args);
     
-    case N(QUOTE) :
-        return clearvalue(1,par->q,&par->q->arg); 
+        case N(QUOTE) :
+            return clearvalue(1,par->q,&par->q->arg); 
     
-    case N(PAIRQ) :
-        return sclearvalue(1,par->pq,&par->pq->arg); 
+        case N(PAIRQ) :
+            return clearvalue(1,par->pq,&par->pq->arg); 
     
-    case N(LISTQ) :
-        return sclearvalue(1,par->lq,&par->lq->arg); 
+        case N(LISTQ) :
+            return clearvalue(1,par->lq,&par->lq->arg); 
 
-    case N(NULLQ) :
-        return sclearvalue(1,par->nq,&par->nq->arg); 
+        case N(NULLQ) :
+            return clearvalue(1,par->nq,&par->nq->arg); 
 
-    case N(DEFINE) :
-        return sclearvalue(2,par->d,&par->d->var,&par->d->expr);
+        case N(DEFINE) :
+            return clearvalue(2,par->d,&par->d->var,&par->d->expr);
 
-    default :
-        DEBUG_PRINT(("Could not clear SValue !!!")) 
-        return;
-    
+        default :
+            DEBUG_PRINT(("Could not clear SValue !!!")) 
+            return;
 }}
 
 

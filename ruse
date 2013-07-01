@@ -7,6 +7,75 @@ cscheme=racket
 IFS=""
 spms="" # ex : a.c,b.c
 
+
+############################
+# Preprocess the buildsrc
+#   needs the source
+############################
+preprocess()
+{ 
+    #clear buildsrc
+    rm buildsrc/*.c buildsrc/*.h buildsrc/*.o 2>/dev/null
+
+    $cscheme parser/genc.scm < $1 > buildsrc/input.c
+
+}
+
+############################
+# Build the Load Function
+############################
+load()
+{
+    
+    # copy all cesk to buildsrc - rewriting strategy ?
+    cp cesk/*.c buildsrc
+    cp cesk/*.h buildsrc
+
+    cp scesk/*.c buildsrc/
+    cp -p scesk/*.h buildsrc/
+
+    # replace a
+    grep -B 9999999 "REPLACE" buildsrc/scesk.c > temp.clean
+    if  cat temp.gen >> temp.clean 2>/dev/null ; then 
+        mv temp.clean buildsrc/scesk.c
+        # clean up
+        rm temp.gen 
+    fi
+}
+
+############################
+# Fides generation - TODO
+############################
+fides()
+{
+    (IFS=,
+        for spm in $spms; do
+            echo "Generating code for $spm"
+            fides/generate.pl buildsrc/$spm
+            mv buildsrc/{$spm//\.c/\.spm} buildsrc/bin/{$spm//\.c/\.spm} 
+        done)
+}
+
+
+############################
+# Compile
+############################
+compile()
+{
+
+    preprocess $1
+    load
+
+    # Makefile time
+    make -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt
+}
+
+
+
+#=====================================
+# Front End
+#=====================================
+
 # we want at least one parameter (it may be a flag or an argument)
 if [ $# -eq 0 ]; then
 	echo $Usage >&2
@@ -16,91 +85,56 @@ fi
 type racket >/dev/null 2>&1 || { echo -e >&2 
     "ERROR :: racket must be add to the PATH of the current shell\n Add PATH=\$PATH:/Applications/Racket\ <version>/bin/ to your shell rc"; exit 1; }
 
+# flags
 fflag=0
 vflag=0
-iflag=0
-pflag=0
-sflag=0 # Todo replace with ffi test
 debopt=""
 warnopt=-w
 
-while getopts "ipdfvwcs" OPTION
+echo "last == ".${$(($# -1))}
+
+while getopts "pdfvwc" OPTION
 do
 	case $OPTION in
-    # show input
-    c)  rm buildsrc/input.*
+
+    # compile
+    c)  compile ${$#}
+        exit 0
         ;;
-    p) pflag=1
+
+    # only parsing  
+    p)  preprocess
+        cat buildsrc/input.c
+        echo "============== Secure =================="
+        load
+        tail buildsrc/scesk.c
+        exit 0
         ;;
-    i)  iflag=1
-        ;;
+         
     # use fides
 	f)	fflag=1
 		;;
+
     # debug version 
-    d) dflag=1
-        debopt=-DDEBUG 
+    d) debopt=-DDEBUG 
         ;;
+
     # use valgrind -- not compatible with fides !!
     v) vflag=1
         ;;
+
     # generate warnings
     w) wflag=1
         warnopt="-Wall -Wextra"
         ;;
-    s) sflag=1
-        ;;
+
 	?)	echo $Usage >&2
 		exit 1
 		;;
 	esac
 done
 
-
-#clear buildsrc
-rm buildsrc/*.c buildsrc/*.h buildsrc/*.o 2>/dev/null
-
-# parser
-#sed 's/;.*//' ${!#} > ${!#}__clear
-$cscheme parser/genc.scm < ${!#} > buildsrc/input.c 
-#rm ${!#}__clear
-
-# show c inpud
-if [ $iflag -eq 1 ]; then
-    cat buildsrc/input.c
-fi
-
-if [ $pflag -eq 0 ]; then
-# copy all cesk to buildsrc - rewriting strategy ?
-cp cesk/*.c buildsrc
-cp cesk/*.h buildsrc
-
-if [ $sflag -eq 1 ]; then
-   cp scesk/*.c buildsrc/
-   cp -p scesk/*.h buildsrc/
-
-   # replace a
-    grep -B 9999999 "REPLACE" buildsrc/scesk.c > temp.clean
-    if  cat temp.gen >> temp.clean 2>/dev/null ; then 
-        mv temp.clean buildsrc/scesk.c
-        # clean up
-        rm temp.gen 
-    fi
-fi
-
-# generate fides
-if [ $fflag -eq 1 ]; then
-    #type racket >/dev/null 2>&1 || { echo -e >&2  `ctags --c-kinds=+p 
-    (IFS=,
-        for spm in $spms; do
-            echo "Generating code for $spm"
-            fides/generate.pl buildsrc/$spm
-            mv buildsrc/{$spm//\.c/\.spm} buildsrc/bin/{$spm//\.c/\.spm} 
-        done)
-fi
-
-# Makefile time
-make -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt
+compile
 
 # run baby run
 if [ $vflag -eq 1 -a $fflag -eq 0 ]; then

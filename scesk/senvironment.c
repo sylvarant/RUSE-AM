@@ -14,6 +14,7 @@
  */
 
 #include "senvironment.h" // TODO general
+#include <stdlib.h>
 
 
 /* 
@@ -88,7 +89,7 @@ FUNCTIONALITY N(environ) * N(copyenv)(N(environ) * table){
     new->bucket = MALLOC(sizeof(struct N(envnode))); 
 
     nnode =  new->bucket;
-	struct senvnode * dumb = nnode;
+	struct N(envnode) * dumb = nnode;
     while(node != NULL) {
         nnode->key             = node->key;
         nnode->value           = node->value;

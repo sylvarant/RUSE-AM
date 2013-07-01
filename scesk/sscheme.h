@@ -3,7 +3,7 @@
 
 #include <stdbool.h> // TODO if SPM ?
 #include <stdio.h>
-#include "global.h"
+#include "senvironment.h"
 #include "scheme.h" // TODO resolve
 
 /*-----------------------------------------------------------------------------
@@ -116,7 +116,7 @@ _SCM
 
 SCM_(SClosure)
     MEM(lambda)
-    struct senviron_t  * env;
+    N(environ)  * env;
 _SCM
 
 SCM_(SContinuation)
@@ -182,26 +182,6 @@ _SCM
   
 
 /*-----------------------------------------------------------------------------
- *  Environments
- *-----------------------------------------------------------------------------*/
-struct senvnode {
-    char *key;
-    int value;
-    struct senvnode *next;
-
-};
-
-struct skeylist{
-    char * key;
-    struct skeylist * next;
-};
-
-typedef struct senviron_t {
-    struct senvnode *bucket;
-    int size;
-}senviron;
-
-/*-----------------------------------------------------------------------------
  * Continuation Structure Definitions
  *-----------------------------------------------------------------------------*/
 
@@ -212,7 +192,7 @@ struct sret_kont{
 
 struct scont_kont{
     enum KSTag t;
-	senviron * e;
+	N(environ) * e;
     skont next; 
 };
 
@@ -220,7 +200,7 @@ struct slet_kont{
     enum KSTag t;
 	union SValue var;
 	union SValue expr;
-	senviron * e;
+	N(environ) * e;
     skont  next; 
 };
 

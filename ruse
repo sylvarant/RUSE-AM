@@ -91,14 +91,13 @@ vflag=0
 debopt=""
 warnopt=-w
 
-echo "last == ".${$(($# -1))}
 
 while getopts "pdfvwc" OPTION
 do
 	case $OPTION in
 
     # compile
-    c)  compile ${$#}
+    c)  compile ${!#}
         exit 0
         ;;
 
@@ -134,12 +133,11 @@ do
 	esac
 done
 
-compile
+compile ${!#}
 
 # run baby run
 if [ $vflag -eq 1 -a $fflag -eq 0 ]; then
    valgrind --tool=memcheck --dsymutil=yes ./bin/exec 
 else
 ./bin/exec
-fi
 fi

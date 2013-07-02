@@ -30,9 +30,10 @@ SBEGIN, SCAR, SCDR, SCONS, SLIST, SQUOTE, SPAIRQ, SI, SLISTQ, SUNDEF, SDEFINE,SN
 
 enum KSTag {SKLET,SKRET,SKCONTINUE};
 
-// the primitive operations
+// type declarations
 union SValue;
 typedef union SValue (* SPrimOp) (union SValue,union SValue);
+typedef union SValue SValue;
 
 
 /*-----------------------------------------------------------------------------
@@ -206,7 +207,7 @@ struct slet_kont{
 
 
 /*-----------------------------------------------------------------------------
- *  Functions
+ *  Labelling
  *-----------------------------------------------------------------------------*/
 typedef struct sfunctions_t{
     int label;  
@@ -214,10 +215,42 @@ typedef struct sfunctions_t{
 }sfunctions;
 
 
-// simplifications
-typedef union SValue SValue ;
 
-// TODO Remove
+/*-----------------------------------------------------------------------------
+ *  Functionality -> Local to scheme, entrypoints are in global.h
+ *-----------------------------------------------------------------------------*/
+
+// constructors
+FUNCTIONALITY SValue MakeSInt(int n); 
+FUNCTIONALITY SValue MakeSBoolean(unsigned int b);
+FUNCTIONALITY SValue MakeSIf(SValue a,SValue b,SValue c);
+FUNCTIONALITY SValue MakeSLambda(int,SValue body,...);
+FUNCTIONALITY SValue MakeSPrim(int,SPrimOp,SValue arg,...);
+FUNCTIONALITY SValue MakeSSymbol(char *);
+FUNCTIONALITY SValue MakeSApplication(int c,SValue a,...);
+FUNCTIONALITY SValue MakeSCallcc(SValue f);
+FUNCTIONALITY SValue MakeSSet(SValue v,SValue t);
+FUNCTIONALITY SValue MakeSLet(SValue v,SValue t,SValue b);
+FUNCTIONALITY SValue MakeSLetrec(int c,SValue v,SValue t,...);
+FUNCTIONALITY SValue MakeSVoid(void);
+FUNCTIONALITY SValue MakeSBegin(int c,SValue v,...);
+FUNCTIONALITY SValue MakeSCar(SValue v);
+FUNCTIONALITY SValue MakeSCdr(SValue v);
+FUNCTIONALITY SValue MakeSCons(SValue v,SValue v2);
+FUNCTIONALITY SValue MakeSList(int c,SValue v,...);
+FUNCTIONALITY SValue MakeSNIL(void);
+FUNCTIONALITY SValue MakeSPair(SValue v,SValue v2);
+FUNCTIONALITY SValue MakeSQuote(SValue v);
+FUNCTIONALITY SValue MakeSPairQ(SValue v);
+FUNCTIONALITY SValue MakeSListQ(SValue v);
+FUNCTIONALITY SValue MakeSNullQ(SValue v);
+FUNCTIONALITY SValue MakeSDefine(SValue v,SValue v2);
+FUNCTIONALITY SValue MakeSI(Value v);
+FUNCTIONALITY SValue MakeSContinuation(skont kstar);
+FUNCTIONALITY SValue MakeSClosure(SValue atom, N(environ) * htbl);
+FUNCTIONALITY SValue MakeSUndef(void);
+
+// math
 FUNCTIONALITY SValue N(prim_sum)(SValue,SValue);
 FUNCTIONALITY SValue N(prim_difference)(SValue,SValue);
 FUNCTIONALITY SValue N(prim_product)(SValue,SValue);

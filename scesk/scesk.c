@@ -30,61 +30,18 @@
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
 #define FREECELL(y) do{} while(0); // if(y.b != NULL) sfreevalue(&y);
 
-#define MAKE_(TYPE,TAG,ID,ARG) FUNCTIONALITY SValue Make##TYPE(SValue v){\
-    SValue val;\
-    val.ID      = (struct TYPE *) malloc(sizeof(struct TYPE));\
-    val.ID->t       = TAG;\
-    val.ID->ARG = v; \
-    return val;\
-}
 
-#define COPY_(TYPE,TAG,ID,ARG,AA){\
-    SValue out;\
-    out.ID = (struct TYPE *) malloc(sizeof(struct TYPE));\
-    out.ID->t     = TAG;\
-    out.ID->nargs = ARG.ID->nargs;\
-    out.ID->AA = (SValue *) malloc( ARG.ID->nargs * (sizeof (SValue)));\
-    for(int i = 0; i < ARG.ID->nargs; i++){\
-            out.ID->AA[i] = scopyvalue(ARG.ID->AA[i]);}\
-    return out;}
 
 /*-----------------------------------------------------------------------------
  *  Functions
  *-----------------------------------------------------------------------------*/
 // functionality
 
-// constructors
-FUNCTIONALITY SValue MakeSInt(int n); 
-FUNCTIONALITY SValue MakeSBoolean(unsigned int b);
-FUNCTIONALITY SValue MakeSIf(SValue a,SValue b,SValue c);
-FUNCTIONALITY SValue MakeSLambda(int,SValue body,...);
-FUNCTIONALITY SValue MakeSPrim(int,SPrimOp,SValue arg,...);
-FUNCTIONALITY SValue MakeSSymbol(char *);
-FUNCTIONALITY SValue MakeSApplication(int c,SValue a,...);
-FUNCTIONALITY SValue MakeSCallcc(SValue f);
-FUNCTIONALITY SValue MakeSSet(SValue v,SValue t);
-FUNCTIONALITY SValue MakeSLet(SValue v,SValue t,SValue b);
-FUNCTIONALITY SValue MakeSLetrec(int c,SValue v,SValue t,...);
-FUNCTIONALITY SValue MakeSVoid(void);
-FUNCTIONALITY SValue MakeSBegin(int c,SValue v,...);
-FUNCTIONALITY SValue MakeSCar(SValue v);
-FUNCTIONALITY SValue MakeSCdr(SValue v);
-FUNCTIONALITY SValue MakeSCons(SValue v,SValue v2);
-FUNCTIONALITY SValue MakeSList(int c,SValue v,...);
-FUNCTIONALITY SValue MakeSNIL(void);
-FUNCTIONALITY SValue MakeSPair(SValue v,SValue v2);
-FUNCTIONALITY SValue MakeSQuote(SValue v);
-FUNCTIONALITY SValue MakeSPairQ(SValue v);
-FUNCTIONALITY SValue MakeSListQ(SValue v);
-FUNCTIONALITY SValue MakeSNullQ(SValue v);
-FUNCTIONALITY SValue MakeSDefine(SValue v,SValue v2);
-FUNCTIONALITY SValue MakeSI(Value v);
+
 
 // Internal magic
-FUNCTIONALITY SValue MakeSContinuation(skont kstar);
-FUNCTIONALITY SValue MakeSClosure(SValue atom, N(environ) * htbl);
-FUNCTIONALITY SValue MakeSUndef(void);
 FUNCTIONALITY void inject (void);
+// TODO incomplete
 
 
 // list

@@ -29,11 +29,17 @@
 
 
 /*-----------------------------------------------------------------------------
+ *  Local Constants
+ *-----------------------------------------------------------------------------*/
+enum{NUM_ELEMS = 1024};
+
+/*-----------------------------------------------------------------------------
  *  Local Functions
  *-----------------------------------------------------------------------------*/
 
 LOCAL VALUE steprec (void);
 LOCAL LIMBO step(void);
+LOCAL void inject(void);
 LOCAL LIMBO apply(VALUE proc,VALUE * args);
 LOCAL LIMBO applyKont(VALUE val,N(Kont) k);
 LOCAL VALUE evalAtom(VALUE atom);
@@ -287,7 +293,7 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
 
         case N(KLET) : { 
             struct N(KLet) * lk = k.l; 
-            N(insertBinding)(lk->e,lk->var.s->name,mystate->free_adr);
+            N(insertBinding)(&lk->e,lk->var.s->name,mystate->free_adr);
 		    mystate->storage[mystate->free_adr] = N(copyValue)(val); // MEM : Don't clear  
 		    mystate->free_adr++;
             //sfreevalue(&mystate->control);  
@@ -337,7 +343,7 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
 		// update enviroment with new adresses for each variable of lambda
         for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-            N(insertBinding)(proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
+            N(insertBinding)(&proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
             i++;
         }
 
@@ -426,7 +432,7 @@ LOCAL LIMBO step()
             int adress = N(getBinding)(mystate->env,(const char *) mystate->control.sv->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM 
-            VALUE empty = {0};
+            VALUE empty = N(makeVoid());
             return applyKont(empty,mystate->cont);
         }
 
@@ -437,7 +443,7 @@ LOCAL LIMBO step()
             int test = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
 
             if(test == -1){ 
-                N(insertBinding)(mystate->env,(const char *)mystate->control.d->var.s->name,mystate->free_adr++);
+                N(insertBinding)(&mystate->env,(const char *)mystate->control.d->var.s->name,mystate->free_adr++);
             }        
 
             // once binding exists preform set
@@ -445,7 +451,7 @@ LOCAL LIMBO step()
             int adress = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM
-            VALUE empty = {0};
+            VALUE empty = N(makeVoid());
             return applyKont(empty,mystate->cont);
         }
 
@@ -477,7 +483,7 @@ LOCAL LIMBO step()
 
 		    // update enviroment with new adresses for each variable of lambda
             for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-                N(insertBinding)(mystate->env,(const char *)mystate->control.lr->vars[i].s->name,j); 
+                N(insertBinding)(&mystate->env,(const char *)mystate->control.lr->vars[i].s->name,j); 
                 i++;
             }
 
@@ -652,6 +658,27 @@ LOCAL VALUE steprec (){
 
 
 #ifdef SECURE
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    inject
+ *  Description:    create a new start state
+ * =====================================================================================
+ */
+LOCAL void inject (){
+
+    if(mystate != NULL) { free(mystate); }
+
+    // inject state
+    mystate             = MALLOC(sizeof(STATE));
+    mystate->env        = NULL;
+    mystate->storage    = MALLOC(NUM_ELEMS * sizeof(VALUE)); 
+    mystate->cont.empty = NULL;
+    mystate->label      = NULL;
+	mystate->free_adr   = 0;
+}
+
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    secure_eval
@@ -719,8 +746,8 @@ ENTRYPOINT void * secure_eval(int label){
                 int c = mystate->free_adr;
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
-                mystate->storage[c] = (N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z"))));
-                DEBUG_PRINT(("Return :: Adding Label == %d",c))
+                mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
+                DEBUG_PRINT(("Return :: Adding Label == %d \\ \t for member %s",c,N(toString)(mystate->storage[c],false)))
                 return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
             }
         }

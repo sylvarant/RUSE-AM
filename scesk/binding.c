@@ -75,7 +75,8 @@ FUNCTIONALITY BINDING * N(copyBinding)(BINDING * ls){
 
     if(ls ==  NULL) return NULL;
 
-    BINDING * new =  MALLOC(sizeof(BINDING));
+    BINDING * new  = MALLOC(sizeof(BINDING));
+    BINDING * ret  = new;
     BINDING * node = ls;
 
     while(1) {
@@ -92,6 +93,6 @@ FUNCTIONALITY BINDING * N(copyBinding)(BINDING * ls){
         }
     }
 
-    return new;
+    return ret;
 }
 

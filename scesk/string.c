@@ -69,7 +69,6 @@ LOCAL char * generateString (char * start,int c,VALUE v,...){
 
     free(list);
     va_end(arguments);
-
     return str;
 }
 
@@ -120,7 +119,6 @@ LOCAL char * generateseqString(char * start,int c,VALUE * ls,char * del){
     str[0] ='\0';
     strcat(str,start);
     strcat(str,")"); 
-
     return str;
 }
 

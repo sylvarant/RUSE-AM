@@ -25,7 +25,7 @@
 #define MAKE_(TYPE,TAG,ID,ARG) FUNCTIONALITY VALUE N(make##TYPE)(VALUE v){\
     VALUE val;\
     val.ID      = MALLOC(sizeof(struct TYPE));\
-    val.ID->t       = TAG;\
+    val.ID->t       = N(TAG);\
     val.ID->ARG = v; \
     return val;\
 }
@@ -34,7 +34,7 @@
 #define COPY_(TYPE,TAG,ID,ARG,AA){\
     VALUE out;\
     out.ID = MALLOC (sizeof(struct N(TYPE)));\
-    out.ID->t     = TAG;\
+    out.ID->t     = N(TAG);\
     out.ID->nargs = ARG.ID->nargs;\
     out.ID->AA = MALLOC( ARG.ID->nargs * (sizeof (VALUE)));\
     for(int i = 0; i < ARG.ID->nargs; i++){\

@@ -1,9 +1,11 @@
 /*
  * =====================================================================================
  *
- *       Filename:  global.h
+ *       Filename:  binding.h
  *
- *    Description: global header file
+ *    Description:  Implementation of the environment
+ *
+ *        Created:  06/28/2013 14:46:42
  *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
@@ -11,31 +13,28 @@
  * =====================================================================================
  */
 
-#ifndef GLOBAL_INCLUDED
-#define GLOBAL_INCLUDED
+#ifndef ENVIRONMENT_INCLUDED
+#define ENVIRONMENT_INCLUDED
 
-
-#include "secure_macro.h"
-
-/*-----------------------------------------------------------------------------
- *  DEBUGGING
- *-----------------------------------------------------------------------------*/
-
-#ifdef DEBUG
-    #include <stdio.h>
-    #define DEBUG_PRINT(x) printf("DEBUG:: "); printf x ; printf("\n");fflush(stdout);
-#else
-    #define DEBUG_PRINT(x) do {} while (0);
-#endif
-
+#include "global.h"
 
 /*-----------------------------------------------------------------------------
- *  Secure Entrypoints - TODO macrofy
+ *  Environment Binding
+ *  Binds a key -> value
  *-----------------------------------------------------------------------------*/
-ENTRYPOINT void * secure_eval(int seccode);
-ENTRYPOINT void sload (void);
+typedef struct N(Binding_t) {
+    char *key;
+    int value;
+    struct N(Binding_t) * next;
+
+}BINDING;
 
 
-//TODO at insecure Entrypoints
+/*-----------------------------------------------------------------------------
+ *  Functionality
+ *-----------------------------------------------------------------------------*/
+FUNCTIONALITY void N(insertBinding)(BINDING **,char *,int);
+FUNCTIONALITY int N(getBinding)(BINDING *,const char *);
+FUNCTIONALITY BINDING * N(copyBinding)(BINDING *);
 
 #endif

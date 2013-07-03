@@ -60,9 +60,25 @@
 // add nothing to access the Other
 #define OTHERN(NAME) NAME
 
-// Secure uses SVALUEs
-#define VALUE SValue
+// Secure uses SVALUE
+#define VALUE N(Value)
 #define OTHERVALUE Value
+
+// Secure uses SBinding
+#define BINDING N(Binding)
+#define OTHERBINDING Binding
+
+// Secure uses SKont
+#define KONT N(Kont)
+#define OTHERKONT Kont
+
+// Secure uses SLimbo
+#define LIMBO N(Limbo)
+#define OTHERLIMBO Limbo
+
+// Secure uses SState
+#define STATE N(State)
+#define OTHERSTATE State
 
 
 /*-----------------------------------------------------------------------------

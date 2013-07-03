@@ -218,47 +218,47 @@ typedef union Value Value ;
 
 // functionality
 extern Value evaluate(Value p);
-extern char * tostring(Value,bool);
+extern char * toString(Value,bool);
 extern void freevalue(Value *);
 extern Value copyvalue(Value par);
 
 // primitive operators
-extern Value prim_sum(Value,Value);
-extern Value prim_difference(Value,Value);
-extern Value prim_product(Value,Value);
-extern Value prim_numEqual(Value,Value);
+extern Value sumPrim(Value,Value);
+extern Value differencePrim(Value,Value);
+extern Value productPrim(Value,Value);
+extern Value numequalPrim(Value,Value);
 
 // constructors
-extern Value MakeInt(int n); 
-extern Value MakeBoolean(unsigned int b);
-extern Value MakeIf(Value a,Value b,Value c);
-extern Value MakeLambda(int,Value body,...);
-extern Value MakePrim(int,PrimOp,Value arg,...);
-extern Value MakeSymbol(char *);
-extern Value MakeApplication(int c,Value a,...);
-extern Value MakeCallcc(Value f);
-extern Value MakeSet(Value v,Value t);
-extern Value MakeLet(Value v,Value t,Value b);
-extern Value MakeLetrec(int c,Value v,Value t,...);
-extern Value MakeVoid(void);
-extern Value MakeBegin(int c,Value v,...);
-extern Value MakeCar(Value v);
-extern Value MakeCdr(Value v);
-extern Value MakeCons(Value v,Value v2);
-extern Value MakeList(int c,Value v,...);
-extern Value MakeNIL(void);
-extern Value MakePair(Value v,Value v2);
-extern Value MakeQuote(Value v);
-extern Value MakePairQ(Value v);
-extern Value MakeListQ(Value v);
-extern Value MakeNullQ(Value v);
-extern Value MakeDefine(Value v,Value v2);
-extern Value MakeIS(int label);
+extern Value makeInt(int n); 
+extern Value makeBoolean(unsigned int b);
+extern Value makeIf(Value a,Value b,Value c);
+extern Value makeLambda(int,Value body,...);
+extern Value makePrim(int,PrimOp,Value arg,...);
+extern Value makeSymbol(char *);
+extern Value makeApplication(int c,Value a,...);
+extern Value makeCallcc(Value f);
+extern Value makeSet(Value v,Value t);
+extern Value makeLet(Value v,Value t,Value b);
+extern Value makeLetrec(int c,Value v,Value t,...);
+extern Value makeVoid(void);
+extern Value makeBegin(int c,Value v,...);
+extern Value makeCar(Value v);
+extern Value makeCdr(Value v);
+extern Value makeCons(Value v,Value v2);
+extern Value makeList(int c,Value v,...);
+extern Value makeNIL(void);
+extern Value makePair(Value v,Value v2);
+extern Value makeQuote(Value v);
+extern Value makePairQ(Value v);
+extern Value makeListQ(Value v);
+extern Value makeNullQ(Value v);
+extern Value makeDefine(Value v,Value v2);
+extern Value makeIS(int label);
 
 // Internal magic
-extern Value MakeContinuation(kont kstar);
-extern Value MakeClosure(Value atom, environ * htbl);
-extern Value MakeUndef(void);
+extern Value makeContinuation(kont kstar);
+extern Value makeClosure(Value atom, environ * htbl);
+extern Value makeUndef(void);
 
 // get input - todo should this be here ?
 extern Value * getinput();

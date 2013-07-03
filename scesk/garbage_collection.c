@@ -18,31 +18,31 @@
 #ifdef GARBAGE_COLLECTION_INCLUDED
 
 #include <stdarg.h> // TODO remove
-#include "senvironment.h" // TODO
+#include "binding.h" 
 
 /*-----------------------------------------------------------------------------
  *  Local functions
  *-----------------------------------------------------------------------------*/
 
-LOCAL void clearvalue(int c,void * s,VALUE * p,...);
-LOCAL void clearvaluels(int c,void * s,VALUE * ls);
-LOCAL void N(emptyenv)(N(environ) * env); // TODO remove
+LOCAL void clearValue(int c,void * s,VALUE * p,...);
+LOCAL void clearValuels(int c,void * s,VALUE * ls);
+LOCAL void emptyBinding (BINDING * env); // TODO remove
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    clearvalue
+ *         Name:    clearValue
  *  Description:    clear a VALUE with c subvalues
  * =====================================================================================
  */
-LOCAL void clearvalue(int c,void * s,VALUE * p,...){
+LOCAL void clearValue(int c,void * s,VALUE * p,...){
 
     va_list arguments;
     va_start(arguments, p); 
-    N(freevalue)(p);
+    N(freeValue)(p);
 
     for(int i = 1; i < c; ++i ){
-        N(freevalue)(va_arg(arguments,VALUE *));
+        N(freeValue)(va_arg(arguments,VALUE *));
     }
 
     free(s); 
@@ -52,15 +52,15 @@ LOCAL void clearvalue(int c,void * s,VALUE * p,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    clearvaluels
+ *         Name:    clearValuels
  *  Description:    clear VALUE with a list of c subvalues 
  *                  TODO merge with other ?
  * =====================================================================================
  */
-LOCAL void clearvaluels(int c,void * s,VALUE * ls){
+LOCAL void clearValuels(int c,void * s,VALUE * ls){
 
     for(int i = 0 ; i < c ; i++){
-       N(freevalue)(&ls[i]);
+       N(freeValue)(&ls[i]);
     }
 
     if(ls != NULL) free(ls);
@@ -69,19 +69,16 @@ LOCAL void clearvaluels(int c,void * s,VALUE * ls){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    emptyenv
+ *         Name:    emptyBinding
  *  Description:    clear an environment -> this part of garbage collection as
  *                      -> The contents of an environment form direct or indirect
  *                      references to language descriptors
  * =====================================================================================
  */
-LOCAL void N(emptyenv)(N(environ) * table){
+LOCAL void emptyBinding(BINDING * env){
 
-    struct N(envnode) *node;
-    struct N(envnode) *nnode;
-
-    node = table->bucket;
-    nnode = node;
+    N(Binding) *node = env;
+    N(Binding) *nnode = node;
 
     while(node) {
         node = node->next;
@@ -93,19 +90,19 @@ LOCAL void N(emptyenv)(N(environ) * table){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    freevalue
+ *         Name:    freeValue
  *  Description:    free a value : delete both its substructures and itself
  *                  -> to be used by the garbage collector, do not freevalues
  *                  statically !
  * =====================================================================================
  */
-FUNCTIONALITY void N(freevalue)(VALUE * par){
+FUNCTIONALITY void N(freeValue)(VALUE * par){
 
     
     switch(par->tt){
 
         case N(VOID):
-        case N(UNDEF): return;
+            return;
     }
 
     switch(par->b->t){
@@ -122,45 +119,45 @@ FUNCTIONALITY void N(freevalue)(VALUE * par){
         case N(BOOLEAN) : return; 
 
         case N(LAM) : {
-            N(freevalue)(&par->l->body);
-            return clearvaluels(par->l->nargs,par->l,par->l->arguments);
+            N(freeValue)(&par->l->body);
+            return clearValuels(par->l->nargs,par->l,par->l->arguments);
         }
     
         case N(PRIM) :
-            return clearvaluels(par->p->nargs,par->p,par->p->arguments);
+            return clearValuels(par->p->nargs,par->p,par->p->arguments);
 
         case N(SYMBOL) :
             return free(par->s);
 
         case N(APPLICATION) :
-            return clearvaluels(par->a->nargs,par->a,par->a->arguments);
+            return clearValuels(par->a->nargs,par->a,par->a->arguments);
 
         case N(IF) :
-            return clearvalue(3,par->f,&par->f->cond,&par->f->cons,&par->f->alt);
+            return clearValue(3,par->f,&par->f->cond,&par->f->cons,&par->f->alt);
     
         case N(CLOSURE) : {
-            N(emptyenv)(par->c->env);
+            emptyBinding(par->c->env);
             free(par->c->env);
-            return clearvalue(1,par->c,&(par->c->lambda));
+            return clearValue(1,par->c,&(par->c->lambda));
         }
 
         case N(CONTINUATION) :
             return free(par->k);
     
         case N(CALLCC) :
-            return clearvalue(1,par->cc,&par->cc->function);     
+            return clearValue(1,par->cc,&par->cc->function);     
     
         case N(SET) :
-            return clearvalue(2,par->sv,&par->sv->var,&par->sv->value);
+            return clearValue(2,par->sv,&par->sv->var,&par->sv->value);
     
         case N(LET) :
-            return clearvalue(3,par->lt,&par->lt->var,&par->lt->expr,&par->lt->body);
+            return clearValue(3,par->lt,&par->lt->var,&par->lt->expr,&par->lt->body);
     
         case N(LETREC) :{
-            N(freevalue)(&par->lr->body);
+            N(freeValue)(&par->lr->body);
             for(int i = 0; i < par->lr->nargs; i++){
-                N(freevalue)(&par->lr->vars[i]);
-                N(freevalue)(&par->lr->exprs[i]);
+                N(freeValue)(&par->lr->vars[i]);
+                N(freeValue)(&par->lr->exprs[i]);
             }
             free(par->lr->vars);
             free(par->lr->exprs);
@@ -168,37 +165,37 @@ FUNCTIONALITY void N(freevalue)(VALUE * par){
         }
 
         case N(BEGIN) :
-            return clearvaluels(par->bg->nargs,par->bg,par->bg->stmts);
+            return clearValuels(par->bg->nargs,par->bg,par->bg->stmts);
     
         case N(CAR) :
-            return clearvalue(1,par->car,&par->car->arg); 
+            return clearValue(1,par->car,&par->car->arg); 
     
         case N(CDR) :
-        return clearvalue(1,par->cdr,&par->cdr->arg); 
+        return clearValue(1,par->cdr,&par->cdr->arg); 
     
         case N(CONS) :
-            return clearvalue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
+            return clearValue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
     
         case N(LIST) :
-            return clearvaluels(par->ls->nargs,par->ls,par->ls->args);
+            return clearValuels(par->ls->nargs,par->ls,par->ls->args);
     
         case N(QUOTE) :
-            return clearvalue(1,par->q,&par->q->arg); 
+            return clearValue(1,par->q,&par->q->arg); 
     
         case N(PAIRQ) :
-            return clearvalue(1,par->pq,&par->pq->arg); 
+            return clearValue(1,par->pq,&par->pq->arg); 
     
         case N(LISTQ) :
-            return clearvalue(1,par->lq,&par->lq->arg); 
+            return clearValue(1,par->lq,&par->lq->arg); 
 
         case N(NULLQ) :
-            return clearvalue(1,par->nq,&par->nq->arg); 
+            return clearValue(1,par->nq,&par->nq->arg); 
 
         case N(DEFINE) :
-            return clearvalue(2,par->d,&par->d->var,&par->d->expr);
+            return clearValue(2,par->d,&par->d->var,&par->d->expr);
 
         default :
-            DEBUG_PRINT(("Could not clear SValue !!!")) 
+            DEBUG_PRINT(("Could not clear VALUE !!!")) 
             return;
 }}
 

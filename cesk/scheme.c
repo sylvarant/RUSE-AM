@@ -25,7 +25,7 @@
 #include <math.h>
 #include "scheme.h"
 
-#define MAKE_(TYPE,TAG,ID,ARG) extern Value Make##TYPE(Value v){\
+#define MAKE_(TYPE,TAG,ID,ARG) extern Value make##TYPE(Value v){\
     Value val;\
     val.ID      = (struct TYPE *) malloc(sizeof(struct TYPE));\
     val.ID->t       = TAG;\
@@ -56,11 +56,11 @@ static char * generatestring(char * start,int c,Value v,...){
     int sstart = strlen(start);
     char ** list = (char **) malloc(c*(sizeof(char *)));
 
-    list[0] = tostring(v,false);
+    list[0] = toString(v,false);
     sstart   += strlen(list[0]);
 
     for(int i = 1; i < c; ++i ){
-        list[i]   = tostring(va_arg(arguments,Value),false);
+        list[i]   = toString(va_arg(arguments,Value),false);
         sstart   += strlen(list[i]);
     }
 
@@ -95,7 +95,7 @@ static char * generateseqstring(char * start,int c,Value * ls,char * del){
     if(c > 0){
         char ** args = (char **) malloc(c * (sizeof (char *)));
         for(int i = 0; i < c; i++){
-            args[i] = tostring(ls[i],false);
+            args[i] = toString(ls[i],false);
             sstart  += strlen(args[i]);
         }
         sstart += ((c-1) * strlen(del)) + 2; 
@@ -125,11 +125,11 @@ static char * generateseqstring(char * start,int c,Value * ls,char * del){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    tostring
+ *         Name:    toString
  *  Description:    conver Value into string, used to debug
  * =====================================================================================
  */
-extern char * tostring (Value par,bool outer){
+extern char * toString (Value par,bool outer){
     
     switch(par.tt){ 
     
@@ -184,12 +184,12 @@ extern char * tostring (Value par,bool outer){
     case LAM : {
         char * start = "(λ ";
         int sstart = strlen(start);
-        char * body = tostring(par.l->body,false);  
+        char * body = toString(par.l->body,false);  
         int sbody    = strlen(body);
         char ** args = (char **) malloc(par.l->nargs * (sizeof (char *)));
         int sargs    =  0;
         for(int i = 0; i < par.l->nargs; i++){
-            args[i] = tostring(par.l->arguments[i],false);
+            args[i] = toString(par.l->arguments[i],false);
             sargs  += strlen(args[i]);
         }
         char * str = (char *) malloc(sizeof(char) * (sstart+sargs+(par.l->nargs -1) + 4 + sbody+ 2));
@@ -211,13 +211,13 @@ extern char * tostring (Value par,bool outer){
     }
 
     case PRIM : 
-        if(par.p->exec == prim_sum) 
+        if(par.p->exec == sumPrim) 
             return generateseqstring("(+ ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == prim_product)
+        else if(par.p->exec == productPrim)
             return generateseqstring("(* ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == prim_difference)
+        else if(par.p->exec == differencePrim)
             return generateseqstring("(- ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == prim_numEqual)
+        else if(par.p->exec == numequalPrim)
             return generateseqstring("(= ",par.p->nargs,par.p->arguments," "); 
 
     case APPLICATION : 
@@ -262,13 +262,13 @@ extern char * tostring (Value par,bool outer){
     case LETREC : {
         char * start = "letrec([";
         int sstart = strlen(start);
-        char * body = tostring(par.lr->body,false);  
+        char * body = toString(par.lr->body,false);  
         sstart   += strlen(body);
         char ** args = (char **) malloc(par.lr->nargs * (sizeof (char *)));
         char ** args2 = (char **) malloc(par.lr->nargs * (sizeof (char *)));
         for(int i = 0; i < par.lr->nargs; i++){
-            args[i] = tostring(par.lr->vars[i],false);
-            args2[i] = tostring(par.lr->exprs[i],false);
+            args[i] = toString(par.lr->vars[i],false);
+            args2[i] = toString(par.lr->exprs[i],false);
             sstart  += strlen(args[i]) + strlen(args2[i]);
         }
         sstart += (par.lr->nargs * 3) + (par.lr->nargs -1);
@@ -475,51 +475,51 @@ extern void freevalue(Value * par){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    prim_sum
+ *         Name:    sumPrim
  *  Description:    sum operation
  * =====================================================================================
  */
-extern Value prim_sum(Value a, Value b) {
-    return MakeInt(a.z->value + b.z->value) ;
+extern Value sumPrim(Value a, Value b) {
+    return makeInt(a.z->value + b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    prim_product
+ *         Name:    productPrim
  *  Description:    product operation
  * =====================================================================================
  */
-extern Value prim_product(Value a, Value b) {
-    return MakeInt(a.z->value * b.z->value) ;
+extern Value productPrim(Value a, Value b) {
+    return makeInt(a.z->value * b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    prim_difference
+ *         Name:    differencePrim
  *  Description:    difference operation
  * =====================================================================================
  */
-extern Value prim_difference(Value a, Value b) {
-    return MakeInt(a.z->value - b.z->value) ;
+extern Value differencePrim(Value a, Value b) {
+    return makeInt(a.z->value - b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    prim_numEqual
+ *         Name:    numequalPrim
  *  Description:    equal operation
  * =====================================================================================
  */
-extern Value prim_numEqual(Value a, Value b) {
-    return MakeBoolean(a.z->value == b.z->value) ;
+extern Value numequalPrim(Value a, Value b) {
+    return makeBoolean(a.z->value == b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeInt
+ *         Name:    makeInt
  *  Description:    create a Value INT
  * =====================================================================================
  */
-extern Value MakeInt(int n) {
+extern Value makeInt(int n) {
     Value v;
     struct Int * data = (struct Int*) malloc(sizeof(struct Int));
     v.z = data;
@@ -530,11 +530,11 @@ extern Value MakeInt(int n) {
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeIS
+ *         Name:    makeIS
  *  Description:    create a Value IS
  * =====================================================================================
  */
-extern Value MakeIS(int n) {
+extern Value makeIS(int n) {
     Value v;
     struct IS * data = (struct IS*) malloc(sizeof(struct IS));
     v.i = data;
@@ -545,11 +545,11 @@ extern Value MakeIS(int n) {
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeBoolean
+ *         Name:    makeBoolean
  *  Description:    create a Value BOOLEAN
  * =====================================================================================
  */
-extern Value MakeBoolean(unsigned int b) {
+extern Value makeBoolean(unsigned int b) {
     static struct Boolean datatrue  = {BOOLEAN,1};
     static struct Boolean datafalse = {BOOLEAN,0};
 
@@ -561,11 +561,11 @@ extern Value MakeBoolean(unsigned int b) {
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeIf
+ *         Name:    makeIf
  *  Description:    create a Value IF
  * =====================================================================================
  */
-extern Value MakeIf(Value a,Value b,Value c){
+extern Value makeIf(Value a,Value b,Value c){
     Value v;
     struct If * data = (struct If*) malloc(sizeof(struct If));
     v.f = data;
@@ -579,11 +579,11 @@ extern Value MakeIf(Value a,Value b,Value c){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeLambda
+ *         Name:    makeLambda
  *  Description:    create a Value LAM
  * =====================================================================================
  */
-extern Value MakeLambda(int c,Value body,...){
+extern Value makeLambda(int c,Value body,...){
 
     va_list arguments;
     va_start(arguments, body); 
@@ -608,11 +608,11 @@ extern Value MakeLambda(int c,Value body,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakePrim
+ *         Name:    makePrim
  *  Description:    create a Value Prim
  * =====================================================================================
  */
-extern Value MakePrim(int c,PrimOp ex,Value arg,...){
+extern Value makePrim(int c,PrimOp ex,Value arg,...){
 
     va_list arguments;
     va_start(arguments, arg); 
@@ -637,11 +637,11 @@ extern Value MakePrim(int c,PrimOp ex,Value arg,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeApplication
+ *         Name:    makeApplication
  *  Description:    create a Value APPLICATION
  * =====================================================================================
  */
-extern Value MakeApplication(int c,Value a,...){
+extern Value makeApplication(int c,Value a,...){
     
     va_list arguments;
     va_start(arguments, a); 
@@ -665,11 +665,11 @@ extern Value MakeApplication(int c,Value a,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeSymbol
+ *         Name:    makeSymbol
  *  Description:    create a Value SYMBOL
  * =====================================================================================
  */
-extern Value MakeSymbol(char * name){
+extern Value makeSymbol(char * name){
     Value v;
     struct Symbol * data = (struct Symbol*) malloc(sizeof(struct Symbol));
     v.s = data;
@@ -680,11 +680,11 @@ extern Value MakeSymbol(char * name){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeClosure
+ *         Name:    makeClosure
  *  Description:    create a Closure
  * =====================================================================================
  */
-extern Value MakeClosure(Value atom, environ * htbl){
+extern Value makeClosure(Value atom, environ * htbl){
         Value clos;
           
         struct Closure * data = (struct Closure*) malloc(sizeof(struct Closure));
@@ -698,7 +698,7 @@ extern Value MakeClosure(Value atom, environ * htbl){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeCallcc
+ *         Name:    makeCallcc
  *  Description:    create a Callcc
  * =====================================================================================
  */
@@ -706,11 +706,11 @@ MAKE_(Callcc,CALLCC,cc,function)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeSet
+ *         Name:    makeSet
  *  Description:    create a SetV
  * =====================================================================================
  */
-extern Value MakeSet(Value v,Value t){
+extern Value makeSet(Value v,Value t){
     Value val;
 
     val.sv        = (struct SetV *) malloc(sizeof(struct SetV));
@@ -723,11 +723,11 @@ extern Value MakeSet(Value v,Value t){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeLet
+ *         Name:    makeLet
  *  Description:    create a Let
  * =====================================================================================
  */
-extern Value MakeLet(Value v,Value t,Value b){
+extern Value makeLet(Value v,Value t,Value b){
     Value val;
 
     val.lt       = (struct Let *) malloc(sizeof(struct Let));
@@ -741,11 +741,11 @@ extern Value MakeLet(Value v,Value t,Value b){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeLetrec
+ *         Name:    makeLetrec
  *  Description:    create a Letrec
  * =====================================================================================
  */
-extern Value MakeLetrec(int c,Value v,Value t,...){
+extern Value makeLetrec(int c,Value v,Value t,...){
     va_list arguments;
     va_start(arguments, t); 
 
@@ -774,11 +774,11 @@ extern Value MakeLetrec(int c,Value v,Value t,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeContinuation
+ *         Name:    makeContinuation
  *  Description:    internal creation of continuation
  * =====================================================================================
  */
-extern Value MakeContinuation(kont kstar){
+extern Value makeContinuation(kont kstar){
     Value val;
     
     val.k = (struct Continuation *) malloc(sizeof(struct Continuation));
@@ -790,11 +790,11 @@ extern Value MakeContinuation(kont kstar){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeVoid
+ *         Name:    makeVoid
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeVoid(void){
+extern Value makeVoid(void){
     Value val;
     val.tt = VOID;
     return val;
@@ -802,11 +802,11 @@ extern Value MakeVoid(void){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeBegin
+ *         Name:    makeBegin
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeBegin(int c, Value args,...){
+extern Value makeBegin(int c, Value args,...){
     va_list arguments;
     va_start(arguments, args); 
 
@@ -829,7 +829,7 @@ extern Value MakeBegin(int c, Value args,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeCar
+ *         Name:    makeCar
  *  Description:    return a value
  * =====================================================================================
  */
@@ -837,7 +837,7 @@ MAKE_(Car,CAR,car,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeCdr
+ *         Name:    makeCdr
  *  Description:    return a value
  * =====================================================================================
  */
@@ -845,11 +845,11 @@ MAKE_(Cdr,CDR,cdr,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeCons
+ *         Name:    makeCons
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeCons(Value v,Value v2){
+extern Value makeCons(Value v,Value v2){
     Value val;
     
     val.cons = (struct Cons *) malloc(sizeof(struct Cons));
@@ -862,11 +862,11 @@ extern Value MakeCons(Value v,Value v2){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeList
+ *         Name:    makeList
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeList(int c,Value args,...){
+extern Value makeList(int c,Value args,...){
     va_list arguments;
     va_start(arguments, args); 
 
@@ -890,11 +890,11 @@ extern Value MakeList(int c,Value args,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeNIL
+ *         Name:    makeNIL
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeNIL(void){
+extern Value makeNIL(void){
     Value v;
     struct List * data = (struct List*) malloc(sizeof(struct List));
     v.ls = data;
@@ -907,19 +907,19 @@ extern Value MakeNIL(void){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakePair
+ *         Name:    makePair
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakePair(Value v,Value v2){
-    Value ret       = MakeList(2,v,v2);
+extern Value makePair(Value v,Value v2){
+    Value ret       = makeList(2,v,v2);
     ret.ls->islist = 0;
     return ret;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeQuote
+ *         Name:    makeQuote
  *  Description:    return a value
  * =====================================================================================
  */
@@ -927,7 +927,7 @@ MAKE_(Quote,QUOTE,q,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakePairQ
+ *         Name:    makePairQ
  *  Description:    return a value
  * =====================================================================================
  */
@@ -935,7 +935,7 @@ MAKE_(PairQ,PAIRQ,pq,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeListQ
+ *         Name:    makeListQ
  *  Description:    return a value
  * =====================================================================================
  */
@@ -943,7 +943,7 @@ MAKE_(ListQ,LISTQ,lq,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeListQ
+ *         Name:    makeListQ
  *  Description:    return a value
  * =====================================================================================
  */
@@ -951,11 +951,11 @@ MAKE_(NullQ,NULLQ,nq,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeUndef
+ *         Name:    makeUndef
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeUndef(void){
+extern Value makeUndef(void){
     Value val;
     val.tt = UNDEF;
     return val;
@@ -963,11 +963,11 @@ extern Value MakeUndef(void){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    MakeDefine
+ *         Name:    makeDefine
  *  Description:    return a value
  * =====================================================================================
  */
-extern Value MakeDefine(Value v,Value v2){
+extern Value makeDefine(Value v,Value v2){
     Value val;
     
     val.d = (struct Define *) malloc(sizeof(struct Define));
@@ -988,19 +988,19 @@ extern Value copyvalue(Value par){
     switch(par.tt){
 
         case VOID : 
-            return MakeVoid(); 
+            return makeVoid(); 
 
         case UNDEF :
-            return MakeUndef(); 
+            return makeUndef(); 
     }
 
     switch(par.b->t){
 
     case INT :
-        return MakeInt(par.z->value);
+        return makeInt(par.z->value);
 
     case IS :
-        return MakeIS(par.i->label);
+        return makeIS(par.i->label);
     
     case BOOLEAN :
         return par;
@@ -1033,27 +1033,27 @@ extern Value copyvalue(Value par){
     }
 
     case SYMBOL :
-        return MakeSymbol(par.s->name);
+        return makeSymbol(par.s->name);
 
     case APPLICATION : COPY_(Application,APPLICATION,a,par,arguments)
 
     case IF :
-        return MakeIf(copyvalue(par.f->cond),copyvalue(par.f->cons),copyvalue(par.f->alt));
+        return makeIf(copyvalue(par.f->cond),copyvalue(par.f->cons),copyvalue(par.f->alt));
     
     case CLOSURE :
-        return MakeClosure(copyvalue(par.c->lambda),par.c->env);
+        return makeClosure(copyvalue(par.c->lambda),par.c->env);
 
     case CONTINUATION :
-        return MakeContinuation(par.k->kstar); // TODO copy ?
+        return makeContinuation(par.k->kstar); // TODO copy ?
 
     case CALLCC :
-        return MakeCallcc(copyvalue(par.cc->function));
+        return makeCallcc(copyvalue(par.cc->function));
 
     case SET :
-        return MakeSet(copyvalue(par.sv->var),copyvalue(par.sv->value)); 
+        return makeSet(copyvalue(par.sv->var),copyvalue(par.sv->value)); 
     
     case LET :
-        return MakeLet(copyvalue(par.lt->var),copyvalue(par.lt->expr),copyvalue(par.lt->body));
+        return makeLet(copyvalue(par.lt->var),copyvalue(par.lt->expr),copyvalue(par.lt->body));
     
     case LETREC : {
         Value out;
@@ -1075,13 +1075,13 @@ extern Value copyvalue(Value par){
     case BEGIN : COPY_(Begin,BEGIN,bg,par,stmts)
 
     case CAR :
-        return MakeCar(copyvalue(par.car->arg));
+        return makeCar(copyvalue(par.car->arg));
 
     case CDR :
-        return MakeCdr(copyvalue(par.cdr->arg));
+        return makeCdr(copyvalue(par.cdr->arg));
     
     case CONS :
-        return MakeCons(copyvalue(par.cons->arg),copyvalue(par.cons->arg2));
+        return makeCons(copyvalue(par.cons->arg),copyvalue(par.cons->arg2));
 
     case LIST : {
         Value out;
@@ -1098,19 +1098,19 @@ extern Value copyvalue(Value par){
 
 
     case QUOTE :
-        return MakeQuote(copyvalue(par.q->arg));
+        return makeQuote(copyvalue(par.q->arg));
     
     case PAIRQ :
-        return MakePairQ(copyvalue(par.pq->arg));
+        return makePairQ(copyvalue(par.pq->arg));
     
     case LISTQ :
-        return MakeListQ(copyvalue(par.lq->arg));
+        return makeListQ(copyvalue(par.lq->arg));
 
     case DEFINE :
-        return MakeDefine(copyvalue(par.d->var),copyvalue(par.d->expr));
+        return makeDefine(copyvalue(par.d->var),copyvalue(par.d->expr));
 
     case NULLQ :
-        return MakeNullQ(copyvalue(par.nq->arg));
+        return makeNullQ(copyvalue(par.nq->arg));
 
       default :
          DEBUG_PRINT(("Could not Copy !!!"))

@@ -72,12 +72,12 @@ static void debugstate(state * s){
     DEBUG_PRINT(("==========================")) 
     DEBUG_PRINT(("** CONTROL")) 
 
-    char * ctrl = tostring(s->control,false);
+    char * ctrl = toString(s->control,false);
     DEBUG_PRINT((ctrl)) 
     free(ctrl);
     DEBUG_PRINT(("** STORES : %d",s->free_adr)) 
     for(int i = 0; i < s->free_adr; i++){
-        char * str =  tostring(s->storage[i],false);
+        char * str =  toString(s->storage[i],false);
         DEBUG_PRINT(("%d == %s",i,str))
         free(str);
     }
@@ -88,8 +88,8 @@ static void debugstate(state * s){
         node = node->next;
     }
     DEBUG_PRINT(("** CONTINUATION")) 
-    Value cc = MakeContinuation(s->continuation);
-    DEBUG_PRINT((" --> cont type %s",tostring(cc,false)))
+    Value cc = makeContinuation(s->continuation);
+    DEBUG_PRINT((" --> cont type %s",toString(cc,false)))
     DEBUG_PRINT(("==========================")) 
 }
 
@@ -195,7 +195,7 @@ static Value evalatom(Value atom,environ * htbl,memory mem){
 
     case LAM :{
         Value cpy = copyvalue(atom); 
-	    return MakeClosure(cpy,htbl);
+	    return makeClosure(cpy,htbl);
     }
 
     case QUOTE :
@@ -203,7 +203,7 @@ static Value evalatom(Value atom,environ * htbl,memory mem){
         break;
 
     default :{ 
-        char * tmp = tostring(atom,false);
+        char * tmp = toString(atom,false);
         DEBUG_PRINT(("Unkown atom : %s",tmp))
         free(tmp);
         exit(1);
@@ -267,7 +267,7 @@ static limbo applykont(Value val,kont k,state * s)
  * =====================================================================================
  */
 static limbo applyproc(Value proc,Value * args,state *s){
-    DEBUG_PRINT(("CALL PROCEDURE %s",tostring(proc,false)))
+    DEBUG_PRINT(("CALL PROCEDURE %s",toString(proc,false)))
 	if(proc.c->t == CLOSURE){
 
         int curr = s->free_adr;
@@ -283,7 +283,7 @@ static limbo applyproc(Value proc,Value * args,state *s){
 
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < s->free_adr ;j++){
-            DEBUG_PRINT(("Proc %d == %s",i,tostring((args[i]),false)))
+            DEBUG_PRINT(("Proc %d == %s",i,toString((args[i]),false)))
             s->storage[j] = copyvalue(args[i]); // MEM : Don't clear
             i++;
         }
@@ -302,7 +302,7 @@ static limbo applyproc(Value proc,Value * args,state *s){
 		return applykont(args[0],proc.k->kstar, s);
 	}
 	else{
-		DEBUG_PRINT(("Unkown Procedure %s",tostring(proc,false)))
+		DEBUG_PRINT(("Unkown Procedure %s",toString(proc,false)))
         exit(1);
 	}
 }
@@ -356,7 +356,7 @@ static limbo step(state * s)
 
     case CALLCC :{
         Value proc = evalatom(s->control.cc->function,s->environment,s->storage);
-        Value curr = MakeContinuation(s->continuation);
+        Value curr = makeContinuation(s->continuation);
         limbo res = applyproc(proc,&curr,s);
         return res;
     }
@@ -394,7 +394,7 @@ static limbo step(state * s)
         s->control = a;
 
         // TODO continuation memory management
-        // Make a letk with b,c and environment and previous cont
+        // make a letk with b,c and environment and previous cont
         struct let_kont * nn = malloc(sizeof(struct let_kont));
         nn->var  = b;
         nn->expr = c;
@@ -474,7 +474,7 @@ static limbo step(state * s)
                 val.ls->nargs--;
                 return applykont(val,s->continuation,s); 
             }else if(val.ls->nargs == 1) {
-                return applykont(MakeNIL(),s->continuation,s);
+                return applykont(makeNIL(),s->continuation,s);
             }
             else{
                 DEBUG_PRINT(("Empty List!!"))
@@ -500,16 +500,16 @@ static limbo step(state * s)
             v2.ls->nargs++;
             return applykont(v2,s->continuation,s);   
         }
-        return applykont(MakePair(v,v2),s->continuation,s);   
+        return applykont(makePair(v,v2),s->continuation,s);   
     }
 
     case PAIRQ : {
         Value v = evalatom(s->control.pq->arg,s->environment,s->storage);  
         if(v.ls->t == LIST){
             if(v.ls->islist == true){
-                return applykont(MakeBoolean((v.ls->nargs > 0)),s->continuation,s);  
+                return applykont(makeBoolean((v.ls->nargs > 0)),s->continuation,s);  
             }
-            return applykont(MakeBoolean((v.ls->nargs > 1)),s->continuation,s);  
+            return applykont(makeBoolean((v.ls->nargs > 1)),s->continuation,s);  
         }
         else{
             DEBUG_PRINT(("Expected List"))
@@ -520,7 +520,7 @@ static limbo step(state * s)
     case LISTQ : {
         Value v = evalatom(s->control.lq->arg,s->environment,s->storage);  
         if(v.ls->t == LIST){
-            return applykont(MakeBoolean(v.ls->islist),s->continuation,s); 
+            return applykont(makeBoolean(v.ls->islist),s->continuation,s); 
         }
         else{
             DEBUG_PRINT(("Expected List"))
@@ -531,7 +531,7 @@ static limbo step(state * s)
     case NULLQ : {
         Value v = evalatom(s->control.nq->arg,s->environment,s->storage);  
         if(v.ls->t == LIST){
-            return applykont(MakeBoolean(v.ls->nargs == 0),s->continuation,s); 
+            return applykont(makeBoolean(v.ls->nargs == 0),s->continuation,s); 
         }
         else{
             DEBUG_PRINT(("Expected List"))
@@ -630,7 +630,7 @@ static void run (Value * program,int c){
     for(int i = 0; i < c ; i++){
         answer ans = steprec(mystate); 
         if(ans.ans.tt != 0) {
-            char * result = tostring(ans.ans,true);
+            char * result = toString(ans.ans,true);
             printf("%s\n",result);
             // TODO clean up memory
             free(result);

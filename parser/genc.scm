@@ -35,10 +35,10 @@
 ;prim to string
 (define (prim->string prim in)
   (match prim
-    ['+    (if in "prim_sum" "N(prim_sum)")]
-    ['-    (if in "prim_difference" "N(prim_difference)")]
-    ['*    (if in "prim_product" "N(prim_product)")]
-    ['=    (if in "prim_numEqual" "N(prim_numEqual)")]))
+    ['+    (if in "sumPrim" "N(sumPrim)")]
+    ['-    (if in "differencePrim" "N(differencePrim)")]
+    ['*    (if in "productPrim" "N(productPrim)")]
+    ['=    (if in "numequalPrim" "N(numequalPrim)")]))
 
 
 ; how to parse single syntax units
@@ -46,15 +46,15 @@
 (define (c-singlemem exp in) (match exp
     ; integer
     [(? integer?) 
-        (string-append (if in "MakeInt(" "MakeSInt(") (number->string exp) ")") ]
+        (string-append (if in "makeInt(" "N(makeInt)(") (number->string exp) ")") ]
 
     ; boolean
     [(? boolean?) 
-        (string-append (if in "MakeBoolean(" "MakeSBoolean(") (if exp "1" "0") ")") ]   
+        (string-append (if in "makeBoolean(" "N(makeBoolean)(") (if exp "1" "0") ")") ]   
 
     ; symbol
     [(? symbol?)    
-          (string-append  (if in "MakeSymbol( \"" "MakeSSymbol( \"") (symbol->string exp) "\" )")]
+          (string-append  (if in "makeSymbol( \"" "N(makeSymbol)( \"") (symbol->string exp) "\" )")]
 
 ))
 
@@ -68,13 +68,13 @@
     ; datums
     [(or (? integer?) (? boolean?) (? symbol?)) (c-singlemem exp in)]
 
-    [(and (? pair?) (not (? list?))) (string-append (if in "MakePair(" "MakeSPair(")
+    [(and (? pair?) (not (? list?))) (string-append (if in "makePair(" "N(makePair)(")
         (lexeme (car exp) in) "," (lexeme (cdr exp) in) ")" )]
     
 
     ;lists
-    [`(,ex ...) (if (equal? (length ex) 0) (if in "MakeNIL()" "MakeSNIL()")
-        (string-append (if in "MakeList(" "MakeSList(") 
+    [`(,ex ...) (if (equal? (length ex) 0) (if in "makeNIL()" "N(makeNIL)()")
+        (string-append (if in "makeList(" "N(makeList)(") 
             (number->string (length ex)) "," (string-join (wut ex in) ",") ")"))]
 ))
 
@@ -84,9 +84,9 @@
     (match exp
 
     ; void
-        ['void (if in "MakeVoid()" "MakeSVoid()")]
+        ['void (if in "makeVoid()" "N(makeVoid)()")]
     ; nil
-        [(quote '()) (if in "MakeNIL()" "MakeSNIL()")]
+        [(quote '()) (if in "makeNIL()" "N(makeNIL)()")]
 
     ; return datum
         [(or (? integer?) (? boolean?)  (? symbol?)) (c-singlemem exp in)]
@@ -94,70 +94,70 @@
     ; lambda
         [`(λ ,args ,body) 
             (string-append 
-                (if in "MakeLambda(" "MakeSLambda(") (number->string (length args)) "," 
+                (if in "makeLambda(" "N(makeLambda)(") (number->string (length args)) "," 
                     (c-gener body in) "," (string-join (map (lambda x (c-gener x in)) args) ",") ")")]
     ; primitive
         [(cons (and oper (? prim?)) args)
-            (string-append  (if in "MakePrim(" "MakeSPrim(") (number->string (length args)) ","
+            (string-append  (if in "makePrim(" "N(makePrim)(") (number->string (length args)) ","
             (prim->string oper in)  
             "," (string-join (map (lambda x (c-gener x in)) args) ",") ")"
         )] 
     ; if
         [`(if ,conde ,conse ,alte) 
             (string-append 
-              (if in "MakeIf(" "MakeSIf(") (c-gener conde in) "," (c-gener conse in) "," (c-gener alte in) ")" )]
+              (if in "makeIf(" "N(makeIf)(") (c-gener conde in) "," (c-gener conse in) "," (c-gener alte in) ")" )]
     ; call/cc
         [`(call/cc ,f)
-          (string-append (if in "MakeCallcc(" "MakeSCallcc(") (c-gener  f in) ")")]
+          (string-append (if in "makeCallcc(" "N(makeCallcc)(") (c-gener  f in) ")")]
     ; set!
         [`(set! ,v ,aexp) 
-          (string-append (if in "MakeSet(" "MakeSSet(") (c-gener v in) "," (c-gener aexp in) ")" )]
+          (string-append (if in "makeSet(" "N(makeSet)(") (c-gener v in) "," (c-gener aexp in) ")" )]
 	; letrec
         [`(letrec ([,vars ,aexps] ...) ,body) 
-          (string-append (if in "MakeLetrec(" "MakeSLetrec(") (number->string (length vars)) "," (c-gener body in) ","
+          (string-append (if in "makeLetrec(" "N(makeLetrec)(") (number->string (length vars)) "," (c-gener body in) ","
             (string-join (map (lambda x (c-gener x in)) vars) ",") ","  
                 (string-join (map (lambda x (c-gener x in)) aexps) ",") ")")]
     ; let
         [`(let ([,v ,expr]) ,body) 
-          (string-append (if in "MakeLet(" "MakeSLet(") (c-gener v in) "," (c-gener expr in) "," (c-gener body in) ")" )]
+          (string-append (if in "makeLet(" "N(makeLet)(") (c-gener v in) "," (c-gener expr in) "," (c-gener body in) ")" )]
 
-    ;let special
+    ;let special ; TODO removed Undef !!
         [`(let ([,v]) ,body) 
-          (string-append (if in "MakeLet(" "MakeSLet(") (c-gener v in) "," (if in "MakeUndef()" "MakeSUndef()") 
+          (string-append (if in "makeLet(" "N(makeLet)(") (c-gener v in) "," (if in "makeVoid()" "makeSVoid()") 
                 "," (c-gener body in) ")" )]
 
     ; definition
         [`(define ,v ,exp) 
-           (string-append (if in "MakeDefine(" "MakeSDefine(") (c-gener v in) "," (c-gener exp in) ")")] 
+           (string-append (if in "makeDefine(" "N(makeDefine)(") (c-gener v in) "," (c-gener exp in) ")")] 
 
     ; begin statement
         [`(begin . ,args)
-            (string-append (if in "MakeBegin(" "MakeSBegin(") (number->string (length args)) ","   
+            (string-append (if in "makeBegin(" "N(makeBegin)(") (number->string (length args)) ","   
                            (string-join (map (lambda x (c-gener x in)) args) ",") ")")]
     
     ; car
-        [`(car ,lst) (string-append (if in "MakeCar(" "MakeSCar(") (c-gener lst in) ")")]
+        [`(car ,lst) (string-append (if in "makeCar(" "N(makeCar)(") (c-gener lst in) ")")]
 
     ; cdr
-        [`(cdr ,lst) (string-append (if in "MakeCdr(" "MakeSCdr(") (c-gener lst in) ")")]
+        [`(cdr ,lst) (string-append (if in "makeCdr(" "N(makeCdr)(") (c-gener lst in) ")")]
 
     ; cons
-        [`(cons ,lst ,lst2) (string-append (if in "MakeCons(" "MakeSCons(")(c-gener lst in) "," (c-gener lst2 in) ")")]
+        [`(cons ,lst ,lst2) (string-append (if in "makeCons(" "N(makeCons)(")(c-gener lst in) "," (c-gener lst2 in) ")")]
 
     ; pair?
-        [`(pair? ,arg) (string-append (if in "MakePairQ(" "MakeSPairQ(") (c-gener arg in) ")") ]
+        [`(pair? ,arg) (string-append (if in "makePairQ(" "N(makePairQ)(") (c-gener arg in) ")") ]
 
     ; list?
-        [`(list? ,arg) (string-append (if in "MakeListQ(" "MakeSListQ(") (c-gener arg in) ")")]
+        [`(list? ,arg) (string-append (if in "makeListQ(" "N(makeListQ)(") (c-gener arg in) ")")]
 
     ; null?
-        [`(null? ,arg) (string-append (if in "MakeNullQ(" "MakeSNullQ") (c-gener arg in) ")")]
+        [`(null? ,arg) (string-append (if in "makeNullQ(" "N(makeNullQ)") (c-gener arg in) ")")]
 
     ;quote
-        [`(quote ,args) (string-append (if in "MakeQuote(" "MakeSQuote(") (lexeme args in)")")]
+        [`(quote ,args) (string-append (if in "makeQuote(" "N(makeQuote)(") (lexeme args in)")")]
 
     ; SI
-        [`(SI ,arg)  (if (not in) (string-append "MakeSI(" (c-gener arg #t) ")" ) (error "Cannot cross to Insecure from Secure")  )]
+        [`(SI ,arg)  (if (not in) (string-append "makeSI(" (c-gener arg #t) ")" ) (error "Cannot cross to Insecure from Secure")  )]
     ; IS
         [`(IS ,arg) (if in (begin  
                (when (not outside) 
@@ -165,12 +165,12 @@
                 (let ((c xnr))
                 (set! xnr (+ xnr 1))
                 (set! outl  (cons (c-gener arg #f) outl)) 
-                (string-append "MakeIS(" (number->string c) ")"))) (error "Cannot cross to Secure from InSecure") )]
+                (string-append "makeIS(" (number->string c) ")"))) (error "Cannot cross to Secure from InSecure") )]
 
     ; function appl
         [`(,f . ,args)
             (if (equal? (length args) 0) (c-gener f in)
-            (string-append  (if in "MakeApplication(" "MakeSApplication(") (number->string (+ (length args) 1)) "," 
+            (string-append  (if in "makeApplication(" "N(makeApplication)(") (number->string (+ (length args) 1)) "," 
                 (c-gener f in) "," (string-join (map (lambda x (c-gener x in)) args) ",") ")"))]
 
     ; mistake ?
@@ -191,7 +191,7 @@
 
 (define (buildr expr c) (match expr
     ['() '()]
-    [else (cons (string-append "DEBUG_PRINT((\"%d\",mystate->free_adr)) mystate->storage[mystate->free_adr] = "(car expr) ";\n slinsert(&(mystate->functions),mystate->free_adr);\n mystate->free_adr++;\n") (buildr (cdr expr) (+ 1 c)))]))
+    [else (cons (string-append "DEBUG_PRINT((\"%d\",mystate->free_adr)) mystate->storage[mystate->free_adr] = "(car expr) ";\n insertLabel(&(mystate->label),mystate->free_adr);\n mystate->free_adr++;\n") (buildr (cdr expr) (+ 1 c)))]))
 
 
 (define (create-result emit expr)
@@ -221,7 +221,7 @@
             "ENTRYPOINT void sload(void){\n"
             " inject();\n"
             ;" int c = "(number->string (length xxpr))";\n"
-            ;" SValue * ret = malloc(c * (sizeof(SValue)));\n" 
+            ;" VALUE * ret = MALLOC(c * (sizeof(VALUE)));\n" 
             (string-join (buildr (reverse xxpr) 0)  "\n")
             "}\n")              
     )) #:exists 'replace )))

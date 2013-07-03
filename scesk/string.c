@@ -25,33 +25,33 @@
  *  Local functions
  *-----------------------------------------------------------------------------*/
 
-LOCAL char * generatestring (char * start,int c,VALUE v,...);
-LOCAL char * generateseqstring (char * start,int c,VALUE * ls,char * del);
+LOCAL char * generateString (char * start,int c,VALUE v,...);
+LOCAL char * generateseqString (char * start,int c,VALUE * ls,char * del);
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    generatestring
+ *         Name:    generateString
  *  Description:    Converts a VALUE with c number of subvalues into a string 
  *                  The type of VALUE is given in the start argument
  * =====================================================================================
  */
-LOCAL char * generatestring (char * start,int c,VALUE v,...){
+LOCAL char * generateString (char * start,int c,VALUE v,...){
 
     va_list arguments;
     va_start(arguments, v); 
 
     int sstart = strlen(start);
     char ** list = MALLOC(c*(sizeof(char *)));
-    list[0] = N(tostring)(v,false);
+    list[0] = N(toString)(v,false);
     sstart   += strlen(list[0]);
 
     for(int i = 1; i < c; ++i ){
-        list[i]   = N(tostring)(va_arg(arguments,VALUE),false);
+        list[i]   = N(toString)(va_arg(arguments,VALUE),false);
         sstart   += strlen(list[i]);
     }
 
-    char * str = malloc(sizeof(char) * (sstart+(c-1)+2));
+    char * str = MALLOC(sizeof(char) * (sstart+(c-1)+2));
     str[0] ='\0';
     strcat(str,start);
 
@@ -76,14 +76,14 @@ LOCAL char * generatestring (char * start,int c,VALUE v,...){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    generateseqstring
+ *         Name:    generateseqString
  *  Description:    Converts a VALUE with c number of subvalues into a string 
  *                  The type of VALUE is given in the start argument
  *                  ! The difference with generatestring is that this one does not use 
  *                      VA_ARGS :: TODO merge both functions ?
  * =====================================================================================
  */
-LOCAL char * generateseqstring(char * start,int c,VALUE * ls,char * del){
+LOCAL char * generateseqString(char * start,int c,VALUE * ls,char * del){
 
     int sstart = strlen(start);
 
@@ -91,7 +91,7 @@ LOCAL char * generateseqstring(char * start,int c,VALUE * ls,char * del){
         char ** args =  MALLOC(c * (sizeof (char *)));
 
         for(int i = 0; i < c; i++){
-            args[i] = N(tostring)(ls[i],false);
+            args[i] = N(toString)(ls[i],false);
             sstart  += strlen(args[i]);
         }
 
@@ -127,11 +127,11 @@ LOCAL char * generateseqstring(char * start,int c,VALUE * ls,char * del){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    tostring
+ *         Name:    toString
  *  Description:    convert a VALUE into string, used to debug
  * =====================================================================================
  */
-FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
+FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
     
     // Filter out VALUE with no contents
     switch(par.tt){ 
@@ -140,12 +140,6 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
             char * str = MALLOC(5 * sizeof(char));
             str[0] = '\0';
             strcat(str,"void");
-            return str;
-        }
-        case N(UNDEF) : {
-            char * str = MALLOC (6 * sizeof(char));
-            str[0] = '\0';
-            strcat(str,"undef");
             return str;
         }
 
@@ -177,7 +171,7 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
         #ifdef SECURE
         case SI : {
             char * si = "(SI "; 
-            char * cont = OTHERN(tostring)(par.i->arg,false);
+            char * cont = OTHERN(toString)(par.i->arg,false);
             int start = strlen(si)+3+strlen(cont);
             char * str = MALLOC(sizeof(char) * start); 
             sprintf(str,"%s%s)",si,cont);
@@ -188,17 +182,17 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
         case N(LAM) : {
             char * start = "(λ ";
             int sstart = strlen(start);
-            char * body = N(tostring)(par.l->body,false);  
+            char * body = N(toString)(par.l->body,false);  
             int sbody    = strlen(body);
             char ** args = MALLOC(par.l->nargs * (sizeof (char *)));
             int sargs    =  0;
 
             for(int i = 0; i < par.l->nargs; i++){
-                args[i] = N(tostring)(par.l->arguments[i],false);
+                args[i] = N(toString)(par.l->arguments[i],false);
                 sargs  += strlen(args[i]);
             }
 
-            char * str = (char *) malloc(sizeof(char) * (sstart+sargs+(par.l->nargs -1) + 4 + sbody+ 2));
+            char * str = MALLOC(sizeof(char) * (sstart+sargs+(par.l->nargs -1) + 4 + sbody+ 2));
             str[0] ='\0';
             strcat(str,start);
 
@@ -221,20 +215,20 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
         }
 
         case N(PRIM) : 
-            if(par.p->exec == N(prim_sum)) return generateseqstring("(+ ",par.p->nargs,par.p->arguments," "); 
-            else if(par.p->exec == N(prim_product)) return generateseqstring("(* ",par.p->nargs,par.p->arguments," "); 
-            else if(par.p->exec == N(prim_difference)) return generateseqstring("(- ",par.p->nargs,par.p->arguments," "); 
-            else if(par.p->exec == N(prim_numEqual)) return generateseqstring("(= ",par.p->nargs,par.p->arguments," "); 
+            if(par.p->exec == N(sumPrim)) return generateseqString("(+ ",par.p->nargs,par.p->arguments," "); 
+            else if(par.p->exec == N(productPrim)) return generateseqString("(* ",par.p->nargs,par.p->arguments," "); 
+            else if(par.p->exec == N(differencePrim)) return generateseqString("(- ",par.p->nargs,par.p->arguments," "); 
+            else if(par.p->exec == N(numequalPrim)) return generateseqString("(= ",par.p->nargs,par.p->arguments," "); 
         
 
         case N(APPLICATION) : 
-            return generateseqstring("(-> ",par.a->nargs,par.a->arguments," ");
+            return generateseqString("(-> ",par.a->nargs,par.a->arguments," ");
 
         case N(IF) : 
-            return generatestring("(if ",3,par.f->cond,par.f->cons,par.f->alt);
+            return generateString("(if ",3,par.f->cond,par.f->cons,par.f->alt);
 
         case N(CLOSURE) : 
-            return generatestring("#clo(",1,par.c->lambda);
+            return generateString("#clo(",1,par.c->lambda);
     
         case N(CONTINUATION) : {
             char * str = (char *) MALLOC(5 * sizeof(char));
@@ -264,25 +258,25 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
         }
     
         case N(CALLCC) : 
-            return generatestring("(call/cc ",1,par.cc->function);
+            return generateString("(call/cc ",1,par.cc->function);
     
         case N(SET) : 
-            return generatestring("(set ",2,par.sv->var,par.sv->value);
+            return generateString("(set ",2,par.sv->var,par.sv->value);
     
         case N(LET) :
-            return generatestring("(let ",3,par.lt->var,par.lt->expr,par.lt->body);
+            return generateString("(let ",3,par.lt->var,par.lt->expr,par.lt->body);
     
         case N(LETREC) : {
             char * start = "letrec([";
             int sstart = strlen(start);
-            char * body = N(tostring)(par.lr->body,false);  
+            char * body = N(toString)(par.lr->body,false);  
             sstart   += strlen(body);
             char ** args = MALLOC(par.lr->nargs * (sizeof (char *)));
             char ** args2 = MALLOC (par.lr->nargs * (sizeof (char *)));
 
             for(int i = 0; i < par.lr->nargs; i++){
-                args[i] = N(tostring)(par.lr->vars[i],false);
-                args2[i] = N(tostring)(par.lr->exprs[i],false);
+                args[i] = N(toString)(par.lr->vars[i],false);
+                args2[i] = N(toString)(par.lr->exprs[i],false);
                 sstart  += strlen(args[i]) + strlen(args2[i]);
             }
 
@@ -318,35 +312,35 @@ FUNCTIONALITY char * N(tostring) (VALUE par,bool outer){
         }
 
         case N(BEGIN) :
-            return generateseqstring("(begin ",par.bg->nargs,par.bg->stmts," ");
+            return generateseqString("(begin ",par.bg->nargs,par.bg->stmts," ");
     
         case N(CAR) :
-            return generatestring("(car ",1,par.car->arg);
+            return generateString("(car ",1,par.car->arg);
     
         case N(CDR) :
-            return generatestring("(cdr ",1,par.cdr->arg);
+            return generateString("(cdr ",1,par.cdr->arg);
     
         case N(CONS) :
-            return generatestring("(cons ",2,par.cons->arg,par.cons->arg2);
+            return generateString("(cons ",2,par.cons->arg,par.cons->arg2);
     
         case N(LIST) : 
-            if(par.ls->islist)  return generateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," ");
-            return generateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," . ");
+            if(par.ls->islist)  return generateseqString((outer ? "'(" : "("),par.ls->nargs,par.ls->args," ");
+            return generateseqString((outer ? "'(" : "("),par.ls->nargs,par.ls->args," . ");
     
         case N(QUOTE) :
-            return generatestring("(quote ",1,par.q->arg);
+            return generateString("(quote ",1,par.q->arg);
    
         case N(PAIRQ) :
-            return generatestring("(pair? ",1,par.pq->arg);
+            return generateString("(pair? ",1,par.pq->arg);
     
         case N(LISTQ) :
-            return generatestring("(list? ",1,par.lq->arg);
+            return generateString("(list? ",1,par.lq->arg);
 
         case N(NULLQ) :
-            return generatestring("(null? ",1,par.nq->arg);
+            return generateString("(null? ",1,par.nq->arg);
 
         case N(DEFINE) :
-            return generatestring("(define ",2,par.d->var,par.d->expr);
+            return generateString("(define ",2,par.d->var,par.d->expr);
 
         default :
             DEBUG_PRINT(("Could not convert Value to string!!!")) 

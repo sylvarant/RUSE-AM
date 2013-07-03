@@ -1,9 +1,9 @@
 /*
  * =====================================================================================
  *
- *       Filename:  senvironment.c
+ *       Filename:  binding.c
  *
- *    Description:  The environment structure
+ *    Description:  Implementation of the environment
  *
  *        Created:  06/28/2013 15:28:39
  *
@@ -13,20 +13,19 @@
  * =====================================================================================
  */
 
-#include "senvironment.h" // TODO general
+#include "binding.h" 
 #include <stdlib.h>
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    get
+ *         Name:    getBinding
  *  Description:    return an element from a given environment for a given key
  * =====================================================================================
  */
-FUNCTIONALITY int N(get)(N(environ) * table, const char * key)
+FUNCTIONALITY int N(getBinding)(BINDING * ls, const char * key)
 {
-    struct N(envnode) *node;
-    node = table->bucket;
+    BINDING * node = ls;
     while(node) {
         if(strcmp(key,node->key) == 0)
             return node->value;
@@ -38,16 +37,14 @@ FUNCTIONALITY int N(get)(N(environ) * table, const char * key)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    insert
+ *         Name:    insertBinding
  *  Description:    add something to environment
  * =====================================================================================
  */
-FUNCTIONALITY int N(insert)(N(environ) *table,char * key,int value)
+FUNCTIONALITY void N(insertBinding)(BINDING ** ls,char * key,int value)
 {
-    struct N(envnode) **tmp;
-    struct N(envnode) *node ;
-
-    tmp = &table->bucket;
+    BINDING * node;
+    BINDING ** tmp = ls;
 
     while(*tmp) {
         if(strcmp(key,(*tmp)->key) == 0)
@@ -57,55 +54,44 @@ FUNCTIONALITY int N(insert)(N(environ) *table,char * key,int value)
 
     if(*tmp) { 
         node = *tmp;
-    } else 
-    {
+    } else {
         node = MALLOC(sizeof *node);
-        if(node == NULL) return -1;
         node->next = NULL;
         *tmp = node;
-        table->size++;
     }
+
     node->key = key;
     node->value = value;
-
-    return 0;
 }
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    scopyenv
- *  Description:    copy the env
+ *         Name:    copyEnvironment
+ *  Description:    copy the environment
  * =====================================================================================
  */
-FUNCTIONALITY N(environ) * N(copyenv)(N(environ) * table){
+FUNCTIONALITY BINDING * N(copyBinding)(BINDING * ls){
 
-    N(environ) * new = (N(environ) *) MALLOC(sizeof(N(environ)));
-    new->size = table->size;
+    if(ls ==  NULL) return NULL;
 
-    struct N(envnode) *node;
-    struct N(envnode) *nnode;
-    node = table->bucket;
-    new->bucket = MALLOC(sizeof(struct N(envnode))); 
+    BINDING * new =  MALLOC(sizeof(BINDING));
+    BINDING * node = ls;
 
-    nnode =  new->bucket;
-	struct N(envnode) * dumb = nnode;
-    while(node != NULL) {
-        nnode->key             = node->key;
-        nnode->value           = node->value;
-        nnode->next            = MALLOC(sizeof(struct N(envnode))); 
-        node = node->next;
-		dumb = nnode;
-        nnode = nnode->next;
+    while(1) {
+        new->key   = node->key;
+        new->value = node->value;
+
+        if(node->next != NULL){
+            new->next = MALLOC(sizeof(BINDING)); 
+            node      = node->next;
+            new       = new->next;
+        } else{ 
+            new->next = NULL;
+            break;
+        }
     }
 
-	if(dumb != nnode){
-		dumb->next = NULL;
-	}else{
-		new->bucket = NULL;
-	}
-
-    free(nnode);
     return new;
 }
 

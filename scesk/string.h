@@ -24,7 +24,7 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY char * N(tostring) (VALUE par,bool outer);
+FUNCTIONALITY char * N(toString) (VALUE,bool);
 
 #endif
 #endif

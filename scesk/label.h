@@ -1,11 +1,11 @@
 /*
  * =====================================================================================
  *
- *       Filename:  senvironment.h
+ *       Filename:  label.h
  *
- *    Description:  The environment structure
+ *    Description:  The Labelling functionality of the secure machine
  *
- *        Created:  06/28/2013 14:46:42
+ *        Created:  07/02/2013 16:41:23
  *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
@@ -13,33 +13,27 @@
  * =====================================================================================
  */
 
-#ifndef ENVIRONMENT_INCLUDED
-#define ENVIRONMENT_INCLUDED
+#ifdef SECURE
 
 #include "global.h"
 
+#ifndef LABEL_INCLUDED
+#define LABEL_INCLUDED
+
 /*-----------------------------------------------------------------------------
- *  Data Structure
+ *  List of labels -- labels are integers
  *-----------------------------------------------------------------------------*/
-
-struct N(envnode) {
-    char *key;
-    int value;
-    struct N(envnode) * next;
-
-};
-
-typedef struct N(environ_t) {
-    struct N(envnode) * bucket;
-    int size;
-}N(environ);
+typedef struct Label_t{
+    int label;  
+    struct Label_t * next;  
+}Label;
 
 
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY int N(insert)(N(environ) *table,char *key,int value);
-FUNCTIONALITY int N(get)(N(environ) *table,const char *key);
-FUNCTIONALITY N(environ) * N(copyenv)( N(environ) * table);
+FUNCTIONALITY void insertLabel(Label **,int);
+FUNCTIONALITY unsigned int hasLabel(Label *,int);
 
+#endif
 #endif

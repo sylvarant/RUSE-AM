@@ -5,9 +5,7 @@
  *
  *    Description:  Cesk machine in c
  *
- *        Version:  1.0
  *        Created:  10/17/2012 14:54:40
- *       Compiler:  gcc
  *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
@@ -15,197 +13,279 @@
  * =====================================================================================
  */
 
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdarg.h>
+
+#include "cesk.h"
+#include "string.h"
 
 /*-----------------------------------------------------------------------------
  *  Preprocessor
  *-----------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdarg.h>
-#include <math.h>
-#include "scheme.h"
-#include "global.h"
 
-#define MEM_SIZE 1024
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
-#define FREECELL(y) do{} while(0); // if(y.b != NULL) freevalue(&y);
+#define FREECELL(y) do{} while(0); // if(y.b != NULL) sfreeValue(&y);
 
 
 /*-----------------------------------------------------------------------------
- *  Types
+ *  Local Constants
+ *-----------------------------------------------------------------------------*/
+enum{NUM_ELEMS = 1024};
+
+/*-----------------------------------------------------------------------------
+ *  Local Functions
  *-----------------------------------------------------------------------------*/
 
-// what is what 
-typedef Value * memory;
+LOCAL VALUE steprec (void);
+LOCAL LIMBO step(void);
+LOCAL void inject(void);
+LOCAL LIMBO apply(VALUE proc,VALUE * args);
+LOCAL LIMBO applyKont(VALUE val,N(Kont) k);
+LOCAL VALUE evalAtom(VALUE atom);
+LOCAL unsigned int isAtom(VALUE atom);
 
-// CESK State
-typedef struct state_t{
-    Value control;
-    environ * environment; 
-    memory storage;
-    kont continuation;
-	int free_adr;
-}state;
 
-typedef struct answer_t{
-    Value ans;
-    state * s;
-}answer;
+/*-----------------------------------------------------------------------------
+ *  File Members
+ *-----------------------------------------------------------------------------*/
 
-// state + answer
-typedef struct limbo_t{
-    state * computation;
-    answer ans;
-}limbo;
+// this is the state of the cesk machine,
+// which is local to the file for security reasons
+SECRET_DATA STATE * mystate = NULL;
 
-state * mystate = NULL;
+
+/*-----------------------------------------------------------------------------
+ *  Debug -- TODO remove or fix
+ *-----------------------------------------------------------------------------*/
+
+#ifdef DEBUG
+LOCAL void debugState(void);
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    debugstate
+ *         Name:    debugState
  *  Description:    print the current cesk state
  * =====================================================================================
  */
-static void debugstate(state * s){
+LOCAL void debugState(){
+
     DEBUG_PRINT(("==========================")) 
     DEBUG_PRINT(("** CONTROL")) 
 
-    char * ctrl = toString(s->control,false);
+    char * ctrl = N(toString)(mystate->control,false);
     DEBUG_PRINT((ctrl)) 
     free(ctrl);
-    DEBUG_PRINT(("** STORES : %d",s->free_adr)) 
-    for(int i = 0; i < s->free_adr; i++){
-        char * str =  toString(s->storage[i],false);
+    DEBUG_PRINT(("** STORES : %d",mystate->free_adr)) 
+    for(int i = 0; i < mystate->free_adr; i++){
+        char * str =  N(toString)(mystate->storage[i],false);
         DEBUG_PRINT(("%d == %s",i,str))
         free(str);
     }
-    DEBUG_PRINT(("** ENVIRONMENT : %d",s->environment->size)) 
-    struct envnode *node = s->environment->bucket;
+    DEBUG_PRINT(("** ENVIRONMENT : ")) 
+    BINDING *node = mystate->env;
     while(node){
         DEBUG_PRINT(("%s at %d ",node->key,node->value))
         node = node->next;
     }
     DEBUG_PRINT(("** CONTINUATION")) 
-    Value cc = makeContinuation(s->continuation);
-    DEBUG_PRINT((" --> cont type %s",toString(cc,false)))
+    VALUE cc = N(makeContinuation)(mystate->cont);
+    DEBUG_PRINT((" --> cont type %s",N(toString)(cc,false)))
+
+    #ifdef SECURE
+    DEBUG_PRINT(("** FUNCTIONS")) 
+    Label * snode = mystate->label;
+    while(snode != NULL){ 
+        DEBUG_PRINT(("--> Label == %d",snode->label))
+        snode = snode->next;
+    }
+    #endif
     DEBUG_PRINT(("==========================")) 
 }
 
+#endif
+
+
+
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    isatom
- *  Description:    simple check
+ *         Name:    isAtom
+ *  Description:    predicate to identify atomic statements
  * =====================================================================================
  */
-static bool isatom(Value el)
+LOCAL unsigned int isAtom(VALUE el)
 {
-    enum Tag atoms[] = {LAM,INT,IS,SYMBOL,BOOLEAN,PRIM,VOID,LIST,QUOTE,CLOSURE};
-    if(el.tt == VOID||el.tt == UNDEF) return true;
+    enum STag atoms[] = {   N(LAM),N(INT),N(SYMBOL),N(BOOLEAN),N(PRIM),
+                            N(LIST),N(QUOTE),N(CLOSURE),
+                            #ifdef SECURE
+                                SI
+                            #else
+                                IS
+                            #endif
+                        };
+    if(el.tt == N(VOID)) return 1;
     for(int i = 0; i < NELEMS(atoms); i++){ 
-        if(el.b->t == atoms[i]){return true;}
+        if(el.b->t == atoms[i]){return 1;}
     }
-    return false;
+    return 0;
 }
     
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    evalatom
+ *         Name:    evalAtom
  *  Description:    evaluate atomic expressions 
  *  Todo       :    implement primitives
  * =====================================================================================
  */
-static Value evalatom(Value atom,environ * htbl,memory mem){
+FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
     switch(atom.tt){
 
-        case VOID :
-        case UNDEF :
+        case N(VOID) :
             return atom;
     }
 
     switch(atom.b->t){
 
-    case SYMBOL :{
-        int adress = (int) get(htbl,(const char *) atom.s->name); 
+    case N(SYMBOL) :{
+        int adress = (int) N(getBinding)(mystate->env,(const char *) atom.s->name); 
+
         if(adress == -1){ 
             DEBUG_PRINT(("Storage failure for %s",atom.s->name))
-            DEBUG_PRINT(("ENVIRONMENT : %d",htbl->size)) 
-            struct envnode *node = htbl->bucket;
+            DEBUG_PRINT(("ENVIRONMENT : ")) 
+            BINDING *node = mystate->env;
             while(node){
                 DEBUG_PRINT(("%s at %d ",node->key,node->value))
                 node = node->next;
             }
             exit(1);
         }
-        //freevalue(atom);
-        Value res = mem[adress]; 
-        if(res.tt == UNDEF) {
+
+        VALUE res = mystate->storage[adress]; 
+        if(res.tt == N(ERROR)) {
             DEBUG_PRINT(("Unintialized Binding to %s",atom.s->name))
             exit(1);
         }
         return res;
     }
 
-    case BOOLEAN :
-    case INT : 
-    case LIST : 
-    case CLOSURE:
+    // for a lot of cases don't do anything
+    case N(BOOLEAN) :
+    case N(LIST):
+    case N(INT) : 
+    case N(CLOSURE) :
         return atom;
         break;
 
-    case PRIM :{
-        Value * parsed =  (Value *) malloc(atom.p->nargs * sizeof(Value));
+
+    case N(PRIM) :{
+        DEBUG_PRINT(("Starting Primitive"))
+        VALUE * parsed = MALLOC(atom.p->nargs * sizeof(VALUE));
         for(int i = 0; i < atom.p->nargs; i++){
-            parsed[i] = evalatom(atom.p->arguments[i],htbl,mem);
+            parsed[i] = evalAtom(atom.p->arguments[i]);
         }
-        Value sum = atom.p->exec(parsed[0],parsed[1]);
+        VALUE sum = atom.p->exec(parsed[0],parsed[1]);
         for(int i = 2; i < atom.p->nargs; i++){
             sum = atom.p->exec(sum,parsed[i]); 
         }
         free(parsed);
-        //freevalue(atom);
+        DEBUG_PRINT(("Ending Primitive"))
         return sum; 
     }
 
+    #ifdef SECURE
+    case SI : {
+        DEBUG_PRINT(("@Jumping to Insecure"))
+        
+        // make Continue continuation 
+        mystate->cont = N(makeKCont)(mystate->env,mystate-cont);
+
+        // call the outside
+        OTHERVALUE ptr = evaluate((atom.i->arg)); 
+
+        // No Heap
+        if(ptr.tt == OTHERN(VOID)){
+            VALUE empty = {0};
+            return empty;
+        }
+
+        // Descriptors
+        switch(ptr.b->t){
+
+            case OTHERN(LIST) :{
+                VALUE v;
+
+                VALUE * list = MALLOC(ptr.ls->nargs * (sizeof(VALUE))); 
+                for(int i =0; i < ptr.ls->nargs; i++){
+                   list[i] = makeSI(ptr.ls->args[i]);   
+                }
+
+                struct N(List) * data = MALLOC(sizeof(struct N(List)));
+                data->t      = N(LIST);
+                data->islist = ptr.ls->islist;
+                data->nargs = ptr.ls->nargs;
+                data->args = list;
+                v.ls = data;
+
+                return v;
+            }
+         
+            case OTHERN(BOOLEAN) :{
+                return N(makeBoolean)(ptr.b->value);
+            }
+
+            case OTHERN(INT) :{ 
+                return N(makeInt)(ptr.b->value);
+            }
+
+            case OTHERN(CLOSURE) : {
+                int c = mystate->free_adr;
+                mystate->storage[mystate->free_adr] = N(makeSymbol)("a");
+                insertLabel(&(mystate->label),mystate->free_adr);
+                DEBUG_PRINT(("Adding Label (A) == %d",c))
+                mystate->free_adr++;
+                return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ptr,makeIS(c))),N(makeSymbol)("a")));
+            }
+        }
+
+        DEBUG_PRINT(("Failed"))
+        exit(1);
+    }
+    #else
     case IS : {
         DEBUG_PRINT(("@Jumping to Secure"))
 
-		// make Continue continuation
-        kont kk; 
-        kk.c    = malloc(sizeof(struct cont_kont));
-        kk.c->t = KCONTINUE;
-        kk.c->next = mystate->continuation;
-        kk.c->e = copyenv(mystate->environment);
-        mystate->continuation = kk;
-		
-        Value val;
+        VALUE val;
 
+		// make Continue continuation
+        mystate->cont = N(makeKCont)(mystate->env,mystate-cont);
+		
+        // Call the outside
         val.b = secure_eval(atom.i->label);  
 
+        // TODO does this leak information ?
         if(val.b == -1){
             DEBUG_PRINT(("Invalid Label"))
             exit(1);
         }
         
-        return evalatom(val,mystate->environment,mystate->storage); 
+        return evalAtom(val); 
+    }
+    #endif
+
+    case N(LAM) :{
+        VALUE cpy = N(copyValue)(atom); 
+	    return N(makeClosure)(cpy,mystate->env);
     }
 
-    case LAM :{
-        Value cpy = copyvalue(atom); 
-	    return makeClosure(cpy,htbl);
-    }
 
-    case QUOTE :
+    case N(QUOTE) :
         return atom.q->arg; 
         break;
 
     default :{ 
-        char * tmp = toString(atom,false);
-        DEBUG_PRINT(("Unkown atom : %s",tmp))
-        free(tmp);
+        DEBUG_PRINT(("Not to be used"))
         exit(1);
     } 
    }
@@ -213,47 +293,47 @@ static Value evalatom(Value atom,environ * htbl,memory mem){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    applykont
+ *         Name:    applyKont
  *  Description:    execute a continuation 
  * =====================================================================================
  */
-static limbo applykont(Value val,kont k,state * s)
+LOCAL LIMBO applyKont(VALUE val,KONT k)
 {
     if(k.empty == NULL){
-        limbo ret = {NULL,{val,s}};
+        LIMBO ret = {.answer = val};
         return ret;
     }
 
     switch(k.l->t){
 
-        case KLET : { // KOONT
-            struct let_kont * lk = k.l; 
-            insert(lk->e,lk->var.s->name,s->free_adr);
-		    s->storage[s->free_adr] = copyvalue(val); // MEM : Don't clear  
-		    s->free_adr++;
-            //sfreevalue(&s->control);  
-		    s->control      = lk->expr;
-		    s->environment  = lk->e;
-		    s->continuation = lk->next;
-            limbo ret = {s,{}};
+        case N(KLET) : { 
+            struct N(KLet) * lk = k.l; 
+            N(insertBinding)(&lk->e,lk->var.s->name,mystate->free_adr);
+		    mystate->storage[mystate->free_adr] = N(copyValue)(val); // MEM : Don't clear  
+		    mystate->free_adr++;
+            //sfreevalue(&mystate->control);  
+		    mystate->control  = lk->expr;
+		    mystate->env      = lk->e;
+		    mystate->cont     = lk->next;
+            LIMBO ret   = {NULL};
             return ret;
         }
 
-        case KRET :{
-            s->continuation = k.r->next;     
-            s->control = val;
-            limbo ret = {NULL,{val,s}};
+        case SKRET :{
+            mystate->cont    = k.r->next;     
+            mystate->control = val;
+            LIMBO ret  = {.answer = val};
             return ret;
         }
 
-        case KCONTINUE : {
-            s->control      = val;
-            s->continuation = k.c->next;
-            s->environment  = k.c->e;
-            limbo ret       = {s,{}};
+        case SKCONTINUE : {
+            mystate->control = val;
+            mystate->cont    = k.c->next;
+            mystate->env     = k.c->e;
+            LIMBO ret  = {NULL};
             return ret;
         }
-
+        
         default :
             DEBUG_PRINT (("Unsupported Continuation"))
             exit(1);
@@ -262,47 +342,47 @@ static limbo applykont(Value val,kont k,state * s)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    applyproc
- *  Description:    apply procedure to value
+ *         Name:    apply
+ *  Description:    apply arguments to produce a new VALUE
  * =====================================================================================
  */
-static limbo applyproc(Value proc,Value * args,state *s){
-    DEBUG_PRINT(("CALL PROCEDURE %s",toString(proc,false)))
-	if(proc.c->t == CLOSURE){
+LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
-        int curr = s->free_adr;
+    DEBUG_PRINT(("CALL PROCEDURE %s",N(toString)(proc,false)))
+	if(proc.c->t == N(CLOSURE)){
+
+        int curr = mystate->free_adr;
         int nargs = proc.c->lambda.l->nargs; 
         DEBUG_PRINT(("Proc arg == %d",nargs))
-        s->free_adr = curr + nargs; 
+        mystate->free_adr = curr + nargs; 
 
 		// update enviroment with new adresses for each variable of lambda
-        for(int j = curr,i = 0; j < s->free_adr ;j++){
-            insert(proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
+        for(int j = curr,i = 0; j < mystate->free_adr ;j++){
+            N(insertBinding)(&proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
             i++;
         }
 
 		// update storage with adresses pointing to arguments
-        for(int j = curr,i = 0; j < s->free_adr ;j++){
-            DEBUG_PRINT(("Proc %d == %s",i,toString((args[i]),false)))
-            s->storage[j] = copyvalue(args[i]); // MEM : Don't clear
+        for(int j = curr,i = 0; j < mystate->free_adr ;j++){
+            DEBUG_PRINT(("Proc %d == %s",i,N(toString)((args[i]),false)))
+            mystate->storage[j] = N(copyValue)(args[i]); // MEM : Don't clear
             i++;
         }
         
 		// create new state with updated storage and envorinment, control = body of lambda
-        s->environment = copyenv(proc.c->env);
-        Value cpy = copyvalue(proc.c->lambda.l->body);
-        //freevalue(&s->control);
-        s->control = cpy; 
-        limbo ret = {s,{}};
+        mystate->env = N(copyBinding)(proc.c->env);
+        VALUE cpy = N(copyValue)(proc.c->lambda.l->body);
+        //sfreevalue(&mystate->control);
+        mystate->control = cpy; 
+        LIMBO ret = {NULL};
         return ret;
 	}
-	else if(proc.k->t == CONTINUATION){
-    // TODO mem ?
+	else if(proc.k->t == N(CONTINUATION)){
         DEBUG_PRINT((">>>>> DOING CONTINUATION"))
-		return applykont(args[0],proc.k->kstar, s);
+		return applyKont(args[0],proc.k->kstar);
 	}
 	else{
-		DEBUG_PRINT(("Unkown Procedure %s",toString(proc,false)))
+		DEBUG_PRINT(("Unkown Procedure"))
         exit(1);
 	}
 }
@@ -311,262 +391,278 @@ static limbo applyproc(Value proc,Value * args,state *s){
  * ===  FUNCTION  ======================================================================
  *         Name:    step
  *  Description:    execute a step in the CESK machine 
- *  Todo       :	Done ? 
  * =====================================================================================
  */
-static limbo step(state * s)
+LOCAL LIMBO step()
 {
-    // atom case
-    if(isatom(s->control))
+    // if the control is atomic
+    if(isAtom(mystate->control))
     {
-        Value return_val = evalatom(s->control,s->environment,s->storage);
-        return  applykont(return_val,s->continuation,s); 
+        VALUE return_val = evalAtom(mystate->control);
+        return  applyKont(return_val,mystate->cont); 
     }
 
-    switch(s->control.b->t){
+    // execute other control state 
+    switch(mystate->control.b->t){
 
-    case IF :{
-        Value condi = evalatom(s->control.f->cond,s->environment,s->storage);	
+        case N(IF) : {
+            VALUE condi = evalAtom(mystate->control.f->cond);	
 
-		if(condi.b->value == 1){
-            Value cpy = copyvalue(s->control.f->cons);
-            //freevalue(&s->control);
-			s->control = cpy;
-		}else{
-            Value cpy = copyvalue(s->control.f->alt);
-            //freevalue(&s->control);
-			s->control = cpy;	
-		}
+		    if(condi.b->value == 1){
+                VALUE cpy = N(copyValue)(mystate->control.f->cons);
+                //sfreevalue(&mystate->control);
+			    mystate->control = cpy;
+		    }else{
+                VALUE cpy = N(copyValue)(mystate->control.f->alt);
+                //sfreevalue(&mystate->control);
+			    mystate->control = cpy;	
+		    }
 
-        limbo ret = {s,{}};
-		return ret;
-	}
+            LIMBO ret = {NULL};
+		    return ret;
+	    }
 
+        case N(APPLICATION) : {
+            DEBUG_PRINT(("Appl arg == %d",mystate->control.a->nargs))
+            VALUE * argum = MALLOC(sizeof(VALUE) * mystate->control.a->nargs);
 
-    case APPLICATION :{
-        DEBUG_PRINT(("Appl arg == %d",s->control.a->nargs))
-        Value * argum = (Value *) malloc(sizeof(Value) * s->control.a->nargs);
-        for(int i = 0; i < s->control.a->nargs; i++){
-            argum[i] = evalatom(s->control.a->arguments[i],s->environment,s->storage);
-        }
-        limbo res = applyproc(argum[0],(++argum),s);
-        free(--argum);
-        return res;
-    }
-
-    case CALLCC :{
-        Value proc = evalatom(s->control.cc->function,s->environment,s->storage);
-        Value curr = makeContinuation(s->continuation);
-        limbo res = applyproc(proc,&curr,s);
-        return res;
-    }
-
-    case SET : {
-        Value val = evalatom(s->control.sv->value,s->environment,s->storage);
-        int adress = (int) get(s->environment,(const char *) s->control.sv->var.s->name); 
-        FREECELL((s->storage[adress]))
-        s->storage[adress] = copyvalue(val); // MEM 
-        Value empty = {0};
-        return applykont(empty,s->continuation,s);
-    }
-
-    case DEFINE : {
-        if( s->control.d->var.s->t != SYMBOL) {DEBUG_PRINT(("Expected Symbol !!")) exit(1);}
-        int test = (int) get(s->environment,(const char *) s->control.d->var.s->name); 
-        if(test == -1){ 
-            insert(s->environment,(const char *)s->control.d->var.s->name,s->free_adr++);
-        }        
-        
-        // once binding exists preform set
-        Value val = evalatom(s->control.d->expr,s->environment,s->storage);
-        int adress = (int) get(s->environment,(const char *) s->control.d->var.s->name); 
-        FREECELL((s->storage[adress]))
-        s->storage[adress] = copyvalue(val); // MEM
-        Value empty = {0};
-        return applykont(empty,s->continuation,s);
-    }
-
-    case LET : {
-        Value a = copyvalue(s->control.lt->expr);
-        Value b = copyvalue(s->control.lt->var);
-        Value c = copyvalue(s->control.lt->body);
-        //freevalue(&(s->control));
-        s->control = a;
-
-        // TODO continuation memory management
-        // make a letk with b,c and environment and previous cont
-        struct let_kont * nn = malloc(sizeof(struct let_kont));
-        nn->var  = b;
-        nn->expr = c;
-        nn->e    = s->environment; 
-        nn->next = s->continuation;
-        nn->t   = KLET;
-        kont new;
-        new.l = nn;
-        s->continuation = new;
-        limbo ret = {s,{}};
-		return ret;
-    }
-
-    case LETREC : {
-        int curr = s->free_adr;
-        int nargs = s->control.lr->nargs; 
-        s->free_adr = curr + nargs; 
-		// update enviroment with new adresses for each variable of lambda
-        for(int j = curr,i = 0; j < s->free_adr ;j++){
-            insert(s->environment,(const char *)s->control.lr->vars[i].s->name,j); 
-            i++;
-        }
-        Value * list = (Value*) malloc(s->control.lr->nargs * (sizeof(Value)));
-        for(int i = 0; i < s->control.lr->nargs ;i++){
-            // curry ?
-            list[i] = evalatom(s->control.lr->exprs[i],s->environment,s->storage);
-        }
-		// update storage with adresses pointing to arguments
-        for(int j = curr,i = 0; j < s->free_adr ;j++){
-            s->storage[j] = copyvalue(list[i]); // MEM : new adress do not delete
-            i++;
-        }
-        Value b = copyvalue(s->control.lr->body);
-        //freevalue(&(s->control));
-        s->control = b;
-        limbo ret = {s,{}};
-		return ret;
-    } 
-
-    case BEGIN : {
-        Value proc;
-        for(int i = 0; i < s->control.bg->nargs; i++){ 
-            proc = evalatom(s->control.bg->stmts[i],
-                s->environment,s->storage);
-        }
-        return  applykont(proc,s->continuation,s); 
-    }
-
-    case CAR : {
-        struct Car * here = s->control.car;
-        Value val = evalatom(here->arg,s->environment,s->storage);
-        if(val.ls->t == LIST){
-            if (val.ls->nargs > 0){
-                return applykont(val.ls->args[0],s->continuation,s); 
-            }else {
-                DEBUG_PRINT(("Empty List!!"))
-                exit(1);
+            for(int i = 0; i < mystate->control.a->nargs; i++){
+                argum[i] = evalAtom(mystate->control.a->arguments[i]);
             }
-        }
-        else{
-            DEBUG_PRINT(("Expected List"))
-            exit(1);
-        }
-    }
 
-    case CDR : {
-        struct Cdr * here = s->control.cdr;
-        Value val = evalatom(here->arg,s->environment,s->storage);
-        if(val.ls->t == LIST){
-            if (val.ls->nargs > 1){
-                Value * newlist = (Value *) malloc((val.ls->nargs-1) * (sizeof (Value))); 
-                for(int i = 1; i < val.ls->nargs; i++){
-                    newlist[(i-1)] = copyvalue(val.ls->args[i]); 
+            LIMBO res = apply(argum[0],(++argum));
+            free(--argum);
+            return res;
+        }
+
+        case N(CALLCC) : {
+            VALUE proc = evalAtom(mystate->control.cc->function);
+            VALUE curr = N(makeContinuation)(mystate->cont);
+            LIMBO res = apply(proc,&curr);
+            return res;
+        }
+
+        case N(SET) : {
+            VALUE val = evalAtom(mystate->control.sv->value);
+            int adress = N(getBinding)(mystate->env,(const char *) mystate->control.sv->var.s->name); 
+            FREECELL((mystate->storage[adress]))
+            mystate->storage[adress] = N(copyValue)(val); // MEM 
+            VALUE empty = N(makeVoid());
+            return applyKont(empty,mystate->cont);
+        }
+
+        case N(DEFINE) : {
+        
+            // TODO keep ?
+            if( mystate->control.d->var.s->t != N(SYMBOL)) {DEBUG_PRINT(("Expected Symbol !!")) exit(1);}
+            int test = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
+
+            if(test == -1){ 
+                N(insertBinding)(&mystate->env,(const char *)mystate->control.d->var.s->name,mystate->free_adr++);
+            }        
+
+            // once binding exists preform set
+            VALUE val = evalAtom(mystate->control.d->expr);
+            int adress = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
+            FREECELL((mystate->storage[adress]))
+            mystate->storage[adress] = N(copyValue)(val); // MEM
+            VALUE empty = N(makeVoid());
+            return applyKont(empty,mystate->cont);
+        }
+
+        case N(LET) : {
+            VALUE a = N(copyValue)(mystate->control.lt->expr);
+            VALUE b = N(copyValue)(mystate->control.lt->var);
+            VALUE c = N(copyValue)(mystate->control.lt->body);
+            //sfreevalue(&(mystate->control));
+            mystate->control = a;
+            mystate->cont = N(makeKLet)(b,c,mystate->env,mystate->cont);
+            LIMBO ret = {NULL};
+		    return ret;
+        }
+
+        case N(LETREC) : {
+            int curr = mystate->free_adr;
+            int nargs = mystate->control.lr->nargs; 
+            mystate->free_adr = curr + nargs; 
+
+		    // update enviroment with new adresses for each variable of lambda
+            for(int j = curr,i = 0; j < mystate->free_adr ;j++){
+                N(insertBinding)(&mystate->env,(const char *)mystate->control.lr->vars[i].s->name,j); 
+                i++;
+            }
+
+            VALUE * list = MALLOC(mystate->control.lr->nargs * (sizeof(VALUE)));
+
+            // evaluate
+            for(int i = 0; i < mystate->control.lr->nargs ;i++){
+                list[i] = evalAtom(mystate->control.lr->exprs[i]);
+            }
+
+		    // update storage with adresses pointing to arguments
+            for(int j = curr,i = 0; j < mystate->free_adr ;j++,i++){
+                mystate->storage[j] = N(copyValue)(list[i]); // MEM : new adress do not delete
+            }
+
+            VALUE b = N(copyValue)(mystate->control.lr->body);
+            //sfreevalue(&(mystate->control));
+            mystate->control = b;
+            LIMBO ret = {NULL};
+		    return ret;
+        } 
+
+        case N(BEGIN) : {
+            VALUE proc;
+            for(int i = 0; i < mystate->control.bg->nargs; i++){ 
+                proc = evalAtom(mystate->control.bg->stmts[i]);
+            }
+            return  applyKont(proc,mystate->cont); 
+        }
+
+        case N(CAR) : {
+            struct N(Car) * here = mystate->control.car;
+            VALUE val = evalAtom(here->arg);
+
+            if(val.ls->t == N(LIST)){
+                if (val.ls->nargs > 0){
+                    return applyKont(val.ls->args[0],mystate->cont); 
+                }else {
+                    DEBUG_PRINT(("Empty List!!"))
+                    exit(1);
                 }
-                free(val.ls->args);
-                val.ls->args = newlist;
-                val.ls->nargs--;
-                return applykont(val,s->continuation,s); 
-            }else if(val.ls->nargs == 1) {
-                return applykont(makeNIL(),s->continuation,s);
             }
             else{
-                DEBUG_PRINT(("Empty List!!"))
+                DEBUG_PRINT(("Expected List"))
                 exit(1);
             }
         }
-        else{
-            DEBUG_PRINT(("Expected List"))
-            exit(1);
-        }
-    }
-    case CONS : {
-        Value v = evalatom(s->control.cons->arg,s->environment,s->storage);
-        Value v2 = evalatom(s->control.cons->arg2,s->environment,s->storage);
-        if(v2.ls->t == LIST && v2.ls->islist == true){
-            Value * newlist = (Value *) malloc((v2.ls->nargs+1) * (sizeof (Value)));  
-            newlist[0] = v;
-            for(int i = 0; i < v2.ls->nargs; i++){
-                newlist[(i+1)] = copyvalue(v2.ls->args[i]); 
-            }
-            free(v2.ls->args);
-            v2.ls->args = newlist;
-            v2.ls->nargs++;
-            return applykont(v2,s->continuation,s);   
-        }
-        return applykont(makePair(v,v2),s->continuation,s);   
-    }
 
-    case PAIRQ : {
-        Value v = evalatom(s->control.pq->arg,s->environment,s->storage);  
-        if(v.ls->t == LIST){
-            if(v.ls->islist == true){
-                return applykont(makeBoolean((v.ls->nargs > 0)),s->continuation,s);  
-            }
-            return applykont(makeBoolean((v.ls->nargs > 1)),s->continuation,s);  
-        }
-        else{
-            DEBUG_PRINT(("Expected List"))
-            exit(1);
-        }
-    }
+        case N(CDR) : {
+            struct N(Cdr) * here = mystate->control.cdr;
+            VALUE val = evalAtom(here->arg);
 
-    case LISTQ : {
-        Value v = evalatom(s->control.lq->arg,s->environment,s->storage);  
-        if(v.ls->t == LIST){
-            return applykont(makeBoolean(v.ls->islist),s->continuation,s); 
+            if(val.ls->t == N(LIST)){
+                if (val.ls->nargs > 1){
+                    VALUE * newlist = MALLOC((val.ls->nargs-1) * (sizeof (VALUE))); 
+
+                    for(int i = 1; i < val.ls->nargs; i++){
+                        newlist[(i-1)] = N(copyValue)(val.ls->args[i]); 
+                    }
+
+                    free(val.ls->args);
+                    val.ls->args = newlist;
+                    val.ls->nargs--;
+                    return applyKont(val,mystate->cont); 
+                }else if(val.ls->nargs == 1) {
+                    return applyKont(N(makeNIL()),mystate->cont);
+                }
+                else{
+                    DEBUG_PRINT(("Empty List!!"))
+                    exit(1);
+                }
+            }
+            else{
+                DEBUG_PRINT(("Expected List"))
+                exit(1);
+            }
         }
-        else{
-            DEBUG_PRINT(("Expected List"))
-            exit(1);
+
+        case N(CONS) : {
+            VALUE v = evalAtom(mystate->control.cons->arg);
+            VALUE v2 = evalAtom(mystate->control.cons->arg2);
+
+            if(v2.ls->t == N(LIST) && v2.ls->islist == true){
+                VALUE * newlist = MALLOC((v2.ls->nargs+1) * (sizeof (VALUE)));  
+                newlist[0] = v;
+                for(int i = 0; i < v2.ls->nargs; i++){
+                    newlist[(i+1)] = N(copyValue)(v2.ls->args[i]); 
+                }
+
+                free(v2.ls->args);
+                v2.ls->args = newlist;
+                v2.ls->nargs++;
+                return applyKont(v2,mystate->cont);   
+            }
+            return applyKont(N(makePair)(v,v2),mystate->cont);   
         }
-    }   
+
+        case N(PAIRQ) : {
+            VALUE v = evalAtom(mystate->control.pq->arg);  
+
+            if(v.ls->t == N(LIST)){
+                if(v.ls->islist == true){
+                    return applyKont(N(makeBoolean)((v.ls->nargs > 0)),mystate->cont);  
+                }
+                return applyKont(N(makeBoolean)((v.ls->nargs > 1)),mystate->cont);  
+            }
+            else{
+                DEBUG_PRINT(("Expected List"))
+                exit(1);
+            }
+        }
+
+        case N(LISTQ) : {
+            VALUE v = evalAtom(mystate->control.lq->arg);  
+            if(v.ls->t == N(LIST)){
+                return applyKont(N(makeBoolean)(v.ls->islist),mystate->cont); 
+            }
+            else{
+                DEBUG_PRINT(("Expected List"))
+                exit(1);
+            }
+        }   
     
-    case NULLQ : {
-        Value v = evalatom(s->control.nq->arg,s->environment,s->storage);  
-        if(v.ls->t == LIST){
-            return applykont(makeBoolean(v.ls->nargs == 0),s->continuation,s); 
-        }
-        else{
-            DEBUG_PRINT(("Expected List"))
+        case N(NULLQ) : {
+            VALUE v = evalAtom(mystate->control.nq->arg);  
+            if(v.ls->t == N(LIST)){
+                return applyKont(N(makeBoolean)(v.ls->nargs == 0),mystate->cont); 
+            }
+            else{
+                DEBUG_PRINT(("Expected List"))
+                exit(1);
+            }
+        }   
+
+        default :
+		    DEBUG_PRINT(("Unkown State"))
             exit(1);
-        }
-    }   
+            break;
 
-    default :
-		DEBUG_PRINT(("Unkown State"))
-        exit(1);
-    break;
-
-}}
+    }
+}
 
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    steprec
- *  Description:    step through program
+ *  Description:    step through program step by step
  * =====================================================================================
  */
-static answer steprec (state * s){
+LOCAL VALUE steprec (){
+
     static int i = 0;
-    DEBUG_PRINT(("STEP# == %d of Insecure",++i))
-    debugstate(s);
-    limbo result = step(s); 
-    if(result.computation == NULL){
-        //DEBUG_PRINT(("DONE"))
-        return result.ans;
+    DEBUG_PRINT(("STEP# == %d of Secure",++i))
+    int log = i;
+
+    // output state
+    #ifdef DEBUG
+        debugState();
+    #endif
+
+    // calculate
+    LIMBO result = step(); 
+    DEBUG_PRINT(("DONE Secure STEP#== %d",log))
+
+    if(result.empty == NULL){
+        return steprec();
     }
     else{
-       return steprec(result.computation);
+        return result.answer;
     }
 }
 
+
+#ifdef SECURE
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -574,83 +670,97 @@ static answer steprec (state * s){
  *  Description:    create a new start state
  * =====================================================================================
  */
-static void inject (void){
+LOCAL void inject (){
 
-    static environ tbl = {NULL,0};
-    static Value empty = {NULL};
-
-    // create empty environment -- tested
-    environ * envtable = (environ *) malloc(sizeof(environ));  
-    *envtable = tbl;
+    if(mystate != NULL) { free(mystate); }
 
     // inject state
-    mystate = malloc(sizeof(state));
-    mystate->control  = empty;
-    mystate->environment = envtable;
-    mystate->storage = (Value *) (malloc(MEM_SIZE * sizeof(Value))); 
-    mystate->continuation.empty = NULL;
-	mystate->free_adr = 0;
+    mystate             = MALLOC(sizeof(STATE));
+    mystate->env        = NULL;
+    mystate->storage    = MALLOC(NUM_ELEMS * sizeof(VALUE)); 
+    mystate->cont.empty = NULL;
+    mystate->label      = NULL;
+	mystate->free_adr   = 0;
 }
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    evaluate
- *  Description:    main entry point for the outside
- *					argument is a pointer to deal with Sancus restriction
+ *         Name:    secure_eval
+ *  Description:    the entry point for the outside
  * =====================================================================================
  */
-extern Value evaluate(Value v){ 
+ENTRYPOINT void * secure_eval(int label){
 
-	// make Return continuation
-    kont kk;
-    kk.r                  = malloc(sizeof(struct ret_kont));
-    kk.r->t               = KRET;
-    kk.r->next            = mystate->continuation;
-    mystate->continuation = kk;
+    DEBUG_PRINT(("Check :: label == %d",label))
 
-    mystate->control = v;
-    answer ans  = steprec(mystate);
-    DEBUG_PRINT(("END OF INSECURE STEP"))
-	return ans.ans;
-}
+    if(hasLabel(mystate->label,label)){
+        mystate->control = mystate->storage[label];
+        DEBUG_PRINT(("Check Succeeded"))
 
+        // make Return Continuation
+        mystate->cont = N(makeKRet)(mystate->cont);
+        
+        // compute
+        VALUE in = steprec();
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    run
- *  Description:    run the program 
- * =====================================================================================
- */
-static void run (Value * program,int c){
-
-    mystate->control = program[0];
-    DEBUG_PRINT(("State has been injected")) 
-
-    for(int i = 0; i < c ; i++){
-        answer ans = steprec(mystate); 
-        if(ans.ans.tt != 0) {
-            char * result = toString(ans.ans,true);
-            printf("%s\n",result);
-            // TODO clean up memory
-            free(result);
+        // No Heap
+        if(in.tt == N(VOID)){
+            Value empty = {0};
+            return empty.b;
         }
-        mystate->control = program[(i+1)%c]; 
+    
+        // Descriptors
+        switch(in.b->t){
+
+            case N(LIST) : {
+                OTHERVALUE v;
+
+                OTHERVALUE * list = MALLOC(in.ls->nargs * (sizeof(OTHERVALUE))); 
+                for(int i =0; i < in.ls->nargs; i++){
+                    int d = mystate->free_adr; 
+                    mystate->storage[mystate->free_adr] = in.ls->args[i];
+                    insertLabel(&(mystate->label),mystate->free_adr);
+                    DEBUG_PRINT(("Adding Label (A) == %d",d))
+                    mystate->free_adr++;
+                    list[i] = makeIS(d);   
+                }
+
+                struct OTHERN(List) * data = MALLOC(sizeof(struct OTHERN(List)));
+                data->t      = OTHERN(LIST);
+                data->islist = in.ls->islist;
+                data->nargs = in.ls->nargs;
+                data->args = list;
+                v.ls = data;
+                return v.b;
+            }
+
+            case N(BOOLEAN) : {
+                return (OTHERN(makeBoolean)(in.b->value)).b; 
+            }
+
+            case N(INT) : {
+                return (OTHERN(makeInt)(in.z->value)).b; 
+            }
+
+            case N(CLOSURE) : {
+                int c = mystate->free_adr;
+                mystate->free_adr++;
+                insertLabel(&(mystate->label),c);
+                mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
+                DEBUG_PRINT(("Return :: Adding Label == %d \\ \t for member %s",c,N(toString)(mystate->storage[c],false)))
+                return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
+            }
+        }
+
+        DEBUG_PRINT(("Invalid Return Value"))
+        exit(1); 
     }
+
+    return -1;
 }
+#endif
 
+/*
+REPLACE */
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    main
- *  Description:    the startpoint
- *  Todo       :    implement conversion of arguments, preferably through file reads
- * =====================================================================================
- */
-int main(int argc, char * argv[]){
-
-    DEBUG_PRINT(("Taking input")) 
-    inject();
-    run(getinput(),getinput_n());
-    return 0; 
-}

@@ -3,11 +3,9 @@
  *
  *       Filename:  scheme.c
  *
- *    Description:  The scheme language in c
+ *    Description:  Scheme Language descriptors implementation
  *
- *        Version:  1.0
- *        Created:  10/17/2012 14:54:40
- *       Compiler:  gcc
+ *        Created:  07/01/2013 19:30:53
  *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
@@ -15,545 +13,104 @@
  * =====================================================================================
  */
 
+#include "scheme.h" 
+#include <stdarg.h> // TODO lose dependency ?
+
+
 /*-----------------------------------------------------------------------------
  *  Preprocessor
  *-----------------------------------------------------------------------------*/
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdarg.h>
-#include <math.h>
-#include "scheme.h"
 
-#define MAKE_(TYPE,TAG,ID,ARG) extern Value make##TYPE(Value v){\
-    Value val;\
-    val.ID      = (struct TYPE *) malloc(sizeof(struct TYPE));\
-    val.ID->t       = TAG;\
+// Compress similar make definitions
+#define MAKE_(TYPE,TAG,ID,ARG) FUNCTIONALITY VALUE N(make##TYPE)(VALUE v){\
+    VALUE val;\
+    val.ID      = MALLOC(sizeof(struct TYPE));\
+    val.ID->t       = N(TAG);\
     val.ID->ARG = v; \
     return val;\
 }
 
+// Compress similar copy definitions
 #define COPY_(TYPE,TAG,ID,ARG,AA){\
-    Value out;\
-    out.ID = (struct TYPE *) malloc(sizeof(struct TYPE));\
-    out.ID->t     = TAG;\
+    VALUE out;\
+    out.ID = MALLOC (sizeof(struct N(TYPE)));\
+    out.ID->t     = N(TAG);\
     out.ID->nargs = ARG.ID->nargs;\
-    out.ID->AA = (Value *) malloc( ARG.ID->nargs * (sizeof (Value)));\
+    out.ID->AA = MALLOC( ARG.ID->nargs * (sizeof (VALUE)));\
     for(int i = 0; i < ARG.ID->nargs; i++){\
-            out.ID->AA[i] = copyvalue(ARG.ID->AA[i]);}\
+            out.ID->AA[i] = N(copyValue)(ARG.ID->AA[i]);}\
     return out;}
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    generatestring
- *  Description:    do internal work
- * =====================================================================================
- */
-static char * generatestring(char * start,int c,Value v,...){
-    va_list arguments;
-    va_start(arguments, v); 
-
-    int sstart = strlen(start);
-    char ** list = (char **) malloc(c*(sizeof(char *)));
-
-    list[0] = toString(v,false);
-    sstart   += strlen(list[0]);
-
-    for(int i = 1; i < c; ++i ){
-        list[i]   = toString(va_arg(arguments,Value),false);
-        sstart   += strlen(list[i]);
-    }
-
-    char * str = (char *) malloc(sizeof(char) * (sstart+(c-1)+2));
-    str[0] ='\0';
-    strcat(str,start);
-
-    for(int i = 0; i <c ; ++i){
-        strcat(str,list[i]);     
-        if(i == c-1) {}
-        else{ strcat(str,",");}
-    }
-
-    strcat(str,")");
-
-    for(int i = 0; i < c ; i++){
-        free(list[i]);
-    }
-    free(list);
-    va_end(arguments);
-    return str;
-}
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    generateseqstring
- *  Description:    do internal work
- * =====================================================================================
- */
-static char * generateseqstring(char * start,int c,Value * ls,char * del){
-    int sstart = strlen(start);
-    if(c > 0){
-        char ** args = (char **) malloc(c * (sizeof (char *)));
-        for(int i = 0; i < c; i++){
-            args[i] = toString(ls[i],false);
-            sstart  += strlen(args[i]);
-        }
-        sstart += ((c-1) * strlen(del)) + 2; 
-        char * str = (char *) malloc(sizeof(char) * (sstart));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < c; i++){
-            strcat(str,args[i]);
-            if(! (i+1 == c)) strcat(str,del);
-        }
-        strcat(str,")");
-        for(int i = 0; i < c; i++){
-            free(args[i]);
-        }
-        free(args);
-
-        return str;
-    } 
-
-    char * str = (char *) malloc(sizeof(char) * (sstart+2));
-    str[0] ='\0';
-    strcat(str,start);
-    strcat(str,")"); 
-
-    return str;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    toString
- *  Description:    conver Value into string, used to debug
- * =====================================================================================
- */
-extern char * toString (Value par,bool outer){
-    
-    switch(par.tt){ 
-    
-        case VOID : {
-            char * str = (char *) malloc(5 * sizeof(char));
-            str[0] = '\0';
-            strcat(str,"void");
-            return str;
-        }
-        case UNDEF : {
-            char * str = (char *) malloc(6 * sizeof(char));
-            str[0] = '\0';
-            strcat(str,"undef");
-            return str;
-        }
-
-    }
-
-    switch(par.b->t){
-
-    case INT : {
-        int stringsize = 2;
-        if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 2);   
-        char * str = (char *) malloc(sizeof(char) * stringsize);
-        sprintf(str,"%d",par.z->value);
-        return str;
-    }
-
-    case BOOLEAN : {
-        char * str = (char *) malloc(3 * sizeof(char));
-        sprintf(str,"%s",par.b->value ? "#t" : "#f");
-        return str;
-    }
-     
-    case SYMBOL : {
-        char * str  =(char *) malloc(sizeof(char) * (strlen(par.s->name) + 1 + (outer ? 1 : 0)));
-        if(outer) strcat(str,"'"); else str[0] = '\0';
-        strcat(str,par.s->name);
-        return str;
-    }
-
-    case IS : {
-        char * start = "(IS ";
-        int sstart = strlen(start);
-        int stringsize = 4;
-        if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 4);   
-        char * str = (char *) malloc(sizeof(char) * (stringsize + sstart));
-        sprintf(str,"%s%d)",start,par.z->value);
-        return str;
-    }
-
-    case LAM : {
-        char * start = "(λ ";
-        int sstart = strlen(start);
-        char * body = toString(par.l->body,false);  
-        int sbody    = strlen(body);
-        char ** args = (char **) malloc(par.l->nargs * (sizeof (char *)));
-        int sargs    =  0;
-        for(int i = 0; i < par.l->nargs; i++){
-            args[i] = toString(par.l->arguments[i],false);
-            sargs  += strlen(args[i]);
-        }
-        char * str = (char *) malloc(sizeof(char) * (sstart+sargs+(par.l->nargs -1) + 4 + sbody+ 2));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < par.l->nargs; i++){
-            strcat(str,args[i]);
-            if(! (i+1 == par.l->nargs)) strcat(str,",");
-        }
-        strcat(str," in ");
-        strcat(str,body);
-        strcat(str,")");
-        free(body);
-        for(int i = 0; i < par.l->nargs; i++){
-            free(args[i]);
-        }
-        free(args);
-        return str;
-    }
-
-    case PRIM : 
-        if(par.p->exec == sumPrim) 
-            return generateseqstring("(+ ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == productPrim)
-            return generateseqstring("(* ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == differencePrim)
-            return generateseqstring("(- ",par.p->nargs,par.p->arguments," "); 
-        else if(par.p->exec == numequalPrim)
-            return generateseqstring("(= ",par.p->nargs,par.p->arguments," "); 
-
-    case APPLICATION : 
-        return generateseqstring("(-> ",par.a->nargs,par.a->arguments," ");
-
-    case IF :
-        return generatestring("(if ",3,par.f->cond,par.f->cons,par.f->alt);
-    
-    case CLOSURE :
-        return generatestring("#clo(",1,par.c->lambda);
-    
-    case CONTINUATION :{
-        char * str = (char *) malloc(5 * sizeof(char));
-        char * insert;
-        if(par.k->kstar.empty != NULL){
-        switch(par.k->kstar.l->t){
-            case KLET :
-                insert = "LETC";
-                break;
-            case KRET :
-                insert = "RETC";
-                break;
-            case KCONTINUE:
-                insert = "CONT";
-
-            default :
-                insert = "ERRO";
-        }}else{ insert = "NULL";}
-        sprintf(str,"%s",insert);
-        return str;
-     }
-    
-    case CALLCC :
-        return generatestring("(call/cc ",1,par.cc->function);
-    
-    case  SET :
-        return generatestring("(set ",2,par.sv->var,par.sv->value);
-    
-    case LET :
-        return generatestring("(let ",3,par.lt->var,par.lt->expr,par.lt->body);
-    
-    case LETREC : {
-        char * start = "letrec([";
-        int sstart = strlen(start);
-        char * body = toString(par.lr->body,false);  
-        sstart   += strlen(body);
-        char ** args = (char **) malloc(par.lr->nargs * (sizeof (char *)));
-        char ** args2 = (char **) malloc(par.lr->nargs * (sizeof (char *)));
-        for(int i = 0; i < par.lr->nargs; i++){
-            args[i] = toString(par.lr->vars[i],false);
-            args2[i] = toString(par.lr->exprs[i],false);
-            sstart  += strlen(args[i]) + strlen(args2[i]);
-        }
-        sstart += (par.lr->nargs * 3) + (par.lr->nargs -1);
-        char * str = (char *) malloc(sizeof(char) * (sstart + 7));
-        str[0] ='\0';
-        strcat(str,start);
-        for(int i = 0; i < par.lr->nargs; i++){
-            strcat(str,"(");
-            strcat(str,args[i]);
-            strcat(str,",");
-            strcat(str,args2[i]);
-            strcat(str,")");
-
-            if(! (i+1 == par.lr->nargs)) strcat(str,",");
-        }
-        strcat(str,"] in ");
-        strcat(str,body);
-        strcat(str,")");
-        free(body);
-
-        for(int i = 0; i < par.a->nargs; i++){
-            free(args[i]);
-            free(args2[i]);
-        }
-
-        free(args);
-        free(args2);
-
-        return str;
-    }
-    case BEGIN :
-        return generateseqstring("(begin ",par.bg->nargs,par.bg->stmts," ");
-    
-    case CAR :
-        return generatestring("(car ",1,par.car->arg);
-    
-    case CDR :
-        return generatestring("(cdr ",1,par.cdr->arg);
-    
-    case CONS :
-        return generatestring("(cons ",2,par.cons->arg,par.cons->arg2);
-    
-    case LIST : 
-        if(par.ls->islist) 
-            return generateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," ");
-        return generateseqstring((outer ? "'(" : "("),par.ls->nargs,par.ls->args," . ");
-    
-    case QUOTE :
-        return generatestring("(quote ",1,par.q->arg);
-   
-    case PAIRQ :
-        return generatestring("(pair? ",1,par.pq->arg);
-    
-    case LISTQ :
-        return generatestring("(list? ",1,par.lq->arg);
-
-    case NULLQ :
-        return generatestring("(null? ",1,par.nq->arg);
-
-    case DEFINE :
-        return generatestring("(define ",2,par.d->var,par.d->expr);
-
-    default :
-        DEBUG_PRINT(("Could not convert Value to string!!!")) 
-        return NULL;
-}}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    clearvalue
- *  Description:    clear a certain type value
- * =====================================================================================
- */
-static void clearvalue(int c,void * s,Value * p,...){
-
-    va_list arguments;
-    va_start(arguments, p); 
-
-    freevalue(p);
-    for(int i = 1; i < c; ++i ){
-        freevalue(va_arg(arguments,Value *));
-    }
-    free(s); 
-    va_end(arguments);
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    clearvalue*
- *  Description:    clear Values made of sequences
- * =====================================================================================
- */
-static void clearvaluels(int c,void * s,Value * ls){
-    for(int i = 0 ; i < c ; i++){
-       freevalue(&ls[i]);
-    }
-    if(ls != NULL) free(ls);
-    free(s);
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    freevalue
- *  Description:    free a value
- * =====================================================================================
- */
-extern void freevalue(Value * par){
-
-    switch(par->tt){
-        case VOID:
-        case UNDEF:
-            return;
-    }
-
-    switch(par->b->t){
-    
-    case INT :  
-        return free(par->z);
-
-    case IS : 
-        return free(par->i);
-       
-    case BOOLEAN : 
-        return; //free(par->b);
-
-    case LAM :
-        freevalue(&par->l->body);
-        return clearvaluels(par->l->nargs,par->l,par->l->arguments);
-    
-    case PRIM :
-        return clearvaluels(par->p->nargs,par->p,par->p->arguments);
-
-    case SYMBOL :
-        return free(par->s);
-
-    case APPLICATION :
-        return clearvaluels(par->a->nargs,par->a,par->a->arguments);
-
-    case IF :
-        return clearvalue(3,par->f,&par->f->cond,&par->f->cons,&par->f->alt);
-    
-    case CLOSURE :
-        emptyenv(par->c->env);
-        free(par->c->env);
-        return clearvalue(1,par->c,&(par->c->lambda));
-
-    case CONTINUATION :
-        return free(par->k);
-    
-    case CALLCC :
-        return clearvalue(1,par->cc,&par->cc->function);     
-    
-    case SET :
-        return clearvalue(2,par->sv,&par->sv->var,&par->sv->value);
-    
-    case LET :
-        return clearvalue(3,par->lt,&par->lt->var,&par->lt->expr,&par->lt->body);
-    
-    case LETREC :
-        freevalue(&par->lr->body);
-        for(int i = 0; i < par->lr->nargs; i++){
-            freevalue(&par->lr->vars[i]);
-            freevalue(&par->lr->exprs[i]);
-        }
-        free(par->lr->vars);
-        free(par->lr->exprs);
-        return free(par->lr);
-    
-    case BEGIN :
-        return clearvaluels(par->bg->nargs,par->bg,par->bg->stmts);
-    
-    case CAR :
-        return clearvalue(1,par->car,&par->car->arg); 
-    
-    case CDR :
-        return clearvalue(1,par->cdr,&par->cdr->arg); 
-    
-    case CONS :
-        return clearvalue(2,par->cons,&par->cons->arg,&par->cons->arg2); 
-    
-    case LIST :
-        return clearvaluels(par->ls->nargs,par->ls,par->ls->args);
-    
-    case QUOTE :
-        return clearvalue(1,par->q,&par->q->arg); 
-    
-    case PAIRQ :
-        return clearvalue(1,par->pq,&par->pq->arg); 
-    
-    case LISTQ :
-        return clearvalue(1,par->lq,&par->lq->arg); 
-
-    case NULLQ :
-        return clearvalue(1,par->nq,&par->nq->arg); 
-
-    case DEFINE :
-        return clearvalue(2,par->d,&par->d->var,&par->d->expr);
-
-    default :
-        DEBUG_PRINT(("Could not clear Value !!!")) 
-        return;
-    
-}}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    sumPrim
+ *         Name:    prim_sum
  *  Description:    sum operation
  * =====================================================================================
  */
-extern Value sumPrim(Value a, Value b) {
-    return makeInt(a.z->value + b.z->value) ;
+FUNCTIONALITY VALUE N(sumPrim)(VALUE a, VALUE b) {
+    return N(makeInt)(a.z->value + b.z->value) ;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    productPrim
+ *         Name:    prim_product
  *  Description:    product operation
  * =====================================================================================
  */
-extern Value productPrim(Value a, Value b) {
-    return makeInt(a.z->value * b.z->value) ;
+FUNCTIONALITY VALUE N(productPrim)(VALUE a, VALUE b) {
+    return N(makeInt)(a.z->value * b.z->value) ;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    differencePrim
+ *         Name:    prim_difference
  *  Description:    difference operation
  * =====================================================================================
  */
-extern Value differencePrim(Value a, Value b) {
-    return makeInt(a.z->value - b.z->value) ;
+FUNCTIONALITY VALUE N(differencePrim)(VALUE a, VALUE b) {
+    return N(makeInt)(a.z->value - b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    numequalPrim
+ *         Name:    prim_numEqual
  *  Description:    equal operation
  * =====================================================================================
  */
-extern Value numequalPrim(Value a, Value b) {
-    return makeBoolean(a.z->value == b.z->value) ;
+FUNCTIONALITY VALUE N(numequalPrim)(VALUE a, VALUE b) {
+    return N(makeBoolean)(a.z->value == b.z->value) ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeInt
- *  Description:    create a Value INT
+ *  Description:    create a VALUE INT
  * =====================================================================================
  */
-extern Value makeInt(int n) {
-    Value v;
-    struct Int * data = (struct Int*) malloc(sizeof(struct Int));
-    v.z = data;
-    v.z->t = INT ;
+FUNCTIONALITY VALUE N(makeInt)(int n) {
+    VALUE v;
+    v.z = MALLOC(sizeof(struct N(Int)));
+    v.z->t = N(INT) ;
     v.z->value = n ;
     return v ;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    makeIS
- *  Description:    create a Value IS
- * =====================================================================================
- */
-extern Value makeIS(int n) {
-    Value v;
-    struct IS * data = (struct IS*) malloc(sizeof(struct IS));
-    v.i = data;
-    v.i->t = IS ;
-    v.i->label = n ;
-    return v ;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
  *         Name:    makeBoolean
- *  Description:    create a Value BOOLEAN
+ *  Description:    create a VALUE BOOLEAN
  * =====================================================================================
  */
-extern Value makeBoolean(unsigned int b) {
-    static struct Boolean datatrue  = {BOOLEAN,1};
-    static struct Boolean datafalse = {BOOLEAN,0};
+FUNCTIONALITY VALUE N(makeBoolean)(unsigned int b) {
 
-    Value v ;
+    // TODO this optimization should be more visible
+    static struct N(Boolean) datatrue  = {N(BOOLEAN),1};
+    static struct N(Boolean) datafalse = {N(BOOLEAN),0};
+
+    VALUE v ;
     if(b){ v.b = &datatrue;}
     else{ v.b = &datafalse;}
     return v ;
@@ -561,15 +118,30 @@ extern Value makeBoolean(unsigned int b) {
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    makeIf
- *  Description:    create a Value IF
+ *         Name:    makeSI
+ *  Description:    create a VALUE across the boundary
  * =====================================================================================
  */
-extern Value makeIf(Value a,Value b,Value c){
-    Value v;
-    struct If * data = (struct If*) malloc(sizeof(struct If));
-    v.f = data;
-    v.f->t    = IF;
+#ifdef SECURE
+extern VALUE makeSI(OTHERVALUE n) {
+    VALUE v;
+    v.i = MALLOC(sizeof(struct SI));
+    v.i->t = SI ;
+    v.i->arg = n ;
+    return v ;
+}
+#endif
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    makeIf
+ *  Description:    create a If VALUE : if a then b else c
+ * =====================================================================================
+ */
+FUNCTIONALITY VALUE N(makeIf)(VALUE a,VALUE b,VALUE c){
+    VALUE v;
+    v.f =  MALLOC(sizeof(struct N(If)));
+    v.f->t    = N(IF);
     v.f->cond = a;
     v.f->cons = b;
     v.f->alt  = c;
@@ -580,129 +152,124 @@ extern Value makeIf(Value a,Value b,Value c){
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeLambda
- *  Description:    create a Value LAM
+ *  Description:    create a λ VALUE with c variables 
  * =====================================================================================
  */
-extern Value makeLambda(int c,Value body,...){
+FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,...){
 
     va_list arguments;
     va_start(arguments, body); 
+    VALUE v;
 
-    Value v;
-
-    struct Lambda * data = (struct Lambda*) malloc(sizeof(struct Lambda));
-    v.l = data;
-    v.l->t = LAM;
+    v.l = MALLOC(sizeof(struct N(Lambda)));
+    v.l->t = N(LAM);
     v.l->nargs = c;
     v.l->body  = body;
+    VALUE * list =  MALLOC(c * (sizeof(VALUE)));
 
-    Value * list = (Value *) malloc(c*(sizeof(Value)));
     for(int i = 0; i < c; ++i )
-            list[i] = va_arg(arguments,Value);
+            list[i] = va_arg(arguments,VALUE);
     
     va_end(arguments);
     v.l->arguments = list;
-    
     return v;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makePrim
- *  Description:    create a Value Prim
+ *  Description:    create a Primitive computation VALUE: (ex i_1 ... i_c)
  * =====================================================================================
  */
-extern Value makePrim(int c,PrimOp ex,Value arg,...){
+FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE arg,...){
 
     va_list arguments;
     va_start(arguments, arg); 
 
-    Value v;
-    struct Prim * data = (struct Prim*) malloc(sizeof(struct Prim));
-    v.p = data;
-    v.p->t = PRIM;
+    VALUE v;
+    v.p = MALLOC(sizeof(struct N(Prim)));
+    v.p->t = N(PRIM);
     v.p->exec  = ex;
     v.p->nargs = c;
-
-    Value * list = (Value *) malloc(c*(sizeof(Value)));
+    VALUE * list = MALLOC(c*(sizeof(VALUE)));
     list[0] = arg;
+
     for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,Value);
+            list[i] = va_arg(arguments,VALUE);
 
     va_end(arguments);
     v.p->arguments = list;
-
     return v;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeApplication
- *  Description:    create a Value APPLICATION
+ *  Description:    create a Application VALUE with c arguments
  * =====================================================================================
  */
-extern Value makeApplication(int c,Value a,...){
+FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE a,...){
     
     va_list arguments;
     va_start(arguments, a); 
 
-    Value v;
-    struct Application * data = (struct Application*) malloc(sizeof(struct Application));
-    v.a = data;
-    v.a->t         = APPLICATION;
+    VALUE v;
+    v.a = MALLOC(sizeof(struct N(Application)));
+    v.a->t         = N(APPLICATION);
     v.a->nargs = c;
     
-    Value * list = (Value *) malloc(c*(sizeof(Value)));
+    VALUE * list = MALLOC(c*(sizeof(VALUE)));
     list[0] = a; 
     for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,Value);
+            list[i] = va_arg(arguments,VALUE);
 
     va_end(arguments);
     v.a->arguments = list;
-
     return v;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeSymbol
- *  Description:    create a Value SYMBOL
+ *  Description:    create a SYMBOL VALUE  with given name
  * =====================================================================================
  */
-extern Value makeSymbol(char * name){
-    Value v;
-    struct Symbol * data = (struct Symbol*) malloc(sizeof(struct Symbol));
-    v.s = data;
-    v.s->t    = SYMBOL;
+FUNCTIONALITY VALUE N(makeSymbol)(char * name){
+    VALUE v;
+    v.s = MALLOC(sizeof(struct N(Symbol)));
+    v.s->t    = N(SYMBOL);
     v.s->name = name;
     return v;
 }
 
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeClosure
- *  Description:    create a Closure
+ *  Description:    create a Closure VALUE for a given lambda and environment
  * =====================================================================================
  */
-extern Value makeClosure(Value atom, environ * htbl){
-        Value clos;
-          
-        struct Closure * data = (struct Closure*) malloc(sizeof(struct Closure));
-        clos.c = data;
-        clos.c->t      = CLOSURE;
-        clos.c->lambda = atom;
-        clos.c->env = copyenv(htbl);
-
+FUNCTIONALITY VALUE N(makeClosure)(VALUE lambda, BINDING * env){
+        VALUE clos;
+        clos.c = MALLOC(sizeof(struct N(Closure)));
+        clos.c->t      = N(CLOSURE);
+        clos.c->lambda = lambda;
+        clos.c->env = N(copyBinding)(env);
 		return clos;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeCallcc
- *  Description:    create a Callcc
+ *  Description:    create a Callcc VALUE
  * =====================================================================================
  */
 MAKE_(Callcc,CALLCC,cc,function)
+
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -710,127 +277,119 @@ MAKE_(Callcc,CALLCC,cc,function)
  *  Description:    create a SetV
  * =====================================================================================
  */
-extern Value makeSet(Value v,Value t){
-    Value val;
-
-    val.sv        = (struct SetV *) malloc(sizeof(struct SetV));
-    val.sv->t     = SET;
+FUNCTIONALITY VALUE N(makeSet)(VALUE v,VALUE t){
+    VALUE val;
+    val.sv        = MALLOC(sizeof(struct N(SetV)));
+    val.sv->t     = N(SET);
     val.sv->var   = v;
     val.sv->value = t;
-
     return val;
 }
+
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeLet
- *  Description:    create a Let
+ *  Description:    create a Let VALUE
  * =====================================================================================
  */
-extern Value makeLet(Value v,Value t,Value b){
-    Value val;
-
-    val.lt       = (struct Let *) malloc(sizeof(struct Let));
-    val.lt->t    = LET;
+FUNCTIONALITY VALUE N(makeLet)(VALUE v,VALUE t,VALUE b){
+    VALUE val;
+    val.lt       = MALLOC(sizeof(struct N(Let)));
+    val.lt->t    = N(LET);
     val.lt->var  = v;
     val.lt->expr = t;
     val.lt->body = b;
-
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeLetrec
- *  Description:    create a Letrec
+ *  Description:    create a Letrec VALUE
  * =====================================================================================
  */
-extern Value makeLetrec(int c,Value v,Value t,...){
+FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE t,...){
     va_list arguments;
     va_start(arguments, t); 
+    VALUE val;
 
-    Value val;
-
-    val.lr        = (struct Letrec *) malloc(sizeof(struct Letrec));
-    val.lr->t     = LETREC;
+    val.lr        = MALLOC(sizeof(struct N(Letrec)));
+    val.lr->t     = N(LETREC);
     val.lr->nargs = c;
-    val.lr->body = v;
-    
-    val.lr->vars = (Value *) malloc(c*(sizeof(Value)));
-    val.lr->exprs = (Value *) malloc(c*(sizeof(Value)));
-
+    val.lr->body  = v;
+    val.lr->vars  = MALLOC(c * (sizeof(VALUE)));
+    val.lr->exprs = MALLOC(c * (sizeof(VALUE)));
     val.lr->vars[0] = t; 
+
     for(int i = 1; i < c; ++i ){
-        val.lr->vars[i] = va_arg(arguments,Value);
+        val.lr->vars[i] = va_arg(arguments,VALUE);
     }
+
     for(int i = 0; i < c; ++i ){
-        val.lr->exprs[i] = va_arg(arguments,Value);
+        val.lr->exprs[i] = va_arg(arguments,VALUE);
     }
 
     va_end(arguments);
-
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeContinuation
- *  Description:    internal creation of continuation
+ *  Description:    creation of continuation VALUE, which is simply a wrapper 
+ *                  around N(Kont)
  * =====================================================================================
  */
-extern Value makeContinuation(kont kstar){
-    Value val;
-    
-    val.k = (struct Continuation *) malloc(sizeof(struct Continuation));
-    val.k->t     = CONTINUATION;
+FUNCTIONALITY VALUE N(makeContinuation)(KONT kstar){
+    VALUE val;
+    val.k        = MALLOC(sizeof(struct N(Continuation)));
+    val.k->t     = N(CONTINUATION);
     val.k->kstar = kstar;
-    
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeVoid
- *  Description:    return a value
+ *  Description:    create a simple void statement
  * =====================================================================================
  */
-extern Value makeVoid(void){
-    Value val;
-    val.tt = VOID;
+FUNCTIONALITY VALUE N(makeVoid)(void){
+    VALUE val;
+    val.tt = N(VOID);
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeBegin
- *  Description:    return a value
+ *  Description:    create begin with c sub expressions
  * =====================================================================================
  */
-extern Value makeBegin(int c, Value args,...){
+FUNCTIONALITY VALUE N(makeBegin)(int c, VALUE args,...){
     va_list arguments;
     va_start(arguments, args); 
+    VALUE v;
 
-    Value v;
-    struct Begin * data = (struct Begin*) malloc(sizeof(struct Begin));
-    v.bg = data;
-    v.bg->t         = BEGIN;
+    v.bg = MALLOC(sizeof(struct N(Begin)));
+    v.bg->t         = N(BEGIN);
     v.bg->nargs = c;
-    
-    Value * list = (Value *) malloc(c*(sizeof(Value)));
+    VALUE * list = MALLOC(c*(sizeof(VALUE)));
     list[0] = args;
+
     for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,Value);
+            list[i] = va_arg(arguments,VALUE);
 
     va_end(arguments);
     v.bg->stmts = list;
-
     return v;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeCar
- *  Description:    return a value
+ *  Description:    create a car VALUE to which returns the first element of a list
  * =====================================================================================
  */
 MAKE_(Car,CAR,car,arg)
@@ -838,7 +397,7 @@ MAKE_(Car,CAR,car,arg)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeCdr
- *  Description:    return a value
+ *  Description:    create a cdr VALUE which returns the last element of a list
  * =====================================================================================
  */
 MAKE_(Cdr,CDR,cdr,arg)
@@ -846,73 +405,68 @@ MAKE_(Cdr,CDR,cdr,arg)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeCons
- *  Description:    return a value
+ *  Description:    create a cons VALUE which adds two lists to produce a new one
  * =====================================================================================
  */
-extern Value makeCons(Value v,Value v2){
-    Value val;
-    
-    val.cons = (struct Cons *) malloc(sizeof(struct Cons));
-    val.cons->t     = CONS;
-    val.cons->arg = v;
+FUNCTIONALITY VALUE N(makeCons)(VALUE v,VALUE v2){
+    VALUE val;
+    val.cons       = MALLOC(sizeof(struct N(Cons)));
+    val.cons->t    = N(CONS);
+    val.cons->arg  = v;
     val.cons->arg2 = v2;
-
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeList
- *  Description:    return a value
+ *  Description:    create a list of c elements
  * =====================================================================================
  */
-extern Value makeList(int c,Value args,...){
+FUNCTIONALITY VALUE N(makeList)(int c,VALUE args,...){
     va_list arguments;
     va_start(arguments, args); 
+    VALUE v;
 
-    Value v;
-    struct List * data = (struct List*) malloc(sizeof(struct List));
-    v.ls = data;
-    v.ls->t         = LIST;
+    v.ls         = MALLOC(sizeof(struct SList));
+    v.ls->t      = N(LIST);
     v.ls->islist = 1;
-    v.ls->nargs = c;
-    
-    Value * list = (Value *) malloc(c*(sizeof(Value)));
-    list[0] = args;
+    v.ls->nargs  = c;
+    VALUE * list = MALLOC(c*(sizeof(VALUE)));
+    list[0]      = args;
+
     for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,Value);
+            list[i] = va_arg(arguments,VALUE);
 
     va_end(arguments);
     v.ls->args = list;
-
     return v;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeNIL
- *  Description:    return a value
+ *  Description:    create an empty list
  * =====================================================================================
  */
-extern Value makeNIL(void){
-    Value v;
-    struct List * data = (struct List*) malloc(sizeof(struct List));
-    v.ls = data;
-    v.ls->t         = LIST;
-    v.ls->nargs = 0;
+FUNCTIONALITY VALUE N(makeNIL)(void){
+    VALUE v;
+    v.ls         = MALLOC(sizeof(struct SList));
+    v.ls->t      = N(LIST);
+    v.ls->nargs  = 0;
     v.ls->islist = 1;
-    v.ls->args = NULL;
+    v.ls->args   = NULL;
     return v;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makePair
- *  Description:    return a value
+ *  Description:    return a pair (v,v2)
  * =====================================================================================
  */
-extern Value makePair(Value v,Value v2){
-    Value ret       = makeList(2,v,v2);
+FUNCTIONALITY VALUE N(makePair)(VALUE v,VALUE v2){
+    VALUE ret      = N(makeList)(2,v,v2);
     ret.ls->islist = 0;
     return ret;
 }
@@ -920,7 +474,7 @@ extern Value makePair(Value v,Value v2){
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeQuote
- *  Description:    return a value
+ *  Description:    create 'arg
  * =====================================================================================
  */
 MAKE_(Quote,QUOTE,q,arg)
@@ -928,7 +482,7 @@ MAKE_(Quote,QUOTE,q,arg)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makePairQ
- *  Description:    return a value
+ *  Description:    create a pair? statement
  * =====================================================================================
  */
 MAKE_(PairQ,PAIRQ,pq,arg)
@@ -936,183 +490,179 @@ MAKE_(PairQ,PAIRQ,pq,arg)
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeListQ
- *  Description:    return a value
+ *  Description:    create a list? statement
  * =====================================================================================
  */
 MAKE_(ListQ,LISTQ,lq,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    makeListQ
- *  Description:    return a value
+ *         Name:    makeNullQ
+ *  Description:    create a null? statement 
  * =====================================================================================
  */
 MAKE_(NullQ,NULLQ,nq,arg)
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    makeUndef
- *  Description:    return a value
- * =====================================================================================
- */
-extern Value makeUndef(void){
-    Value val;
-    val.tt = UNDEF;
-    return val;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
  *         Name:    makeDefine
- *  Description:    return a value
+ *  Description:    create a Define statement
  * =====================================================================================
  */
-extern Value makeDefine(Value v,Value v2){
-    Value val;
-    
-    val.d = (struct Define *) malloc(sizeof(struct Define));
-    val.d->t     = DEFINE;
-    val.d->var = v;
+FUNCTIONALITY VALUE N(makeDefine)(VALUE v,VALUE v2){
+    VALUE val;
+    val.d       = MALLOC(sizeof(struct N(Define)));
+    val.d->t    = N(DEFINE);
+    val.d->var  = v;
     val.d->expr = v2;
     return val;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    copyvalue
- *  Description:    copy a value
+ *         Name:    copyValue
+ *  Description:    copy a VALUE's memory contents
  * =====================================================================================
  */
-extern Value copyvalue(Value par){
+FUNCTIONALITY VALUE N(copyValue)(VALUE par){
 
+    // No heap involved
     switch(par.tt){
 
-        case VOID : 
-            return makeVoid(); 
-
-        case UNDEF :
-            return makeUndef(); 
+        case N(VOID) : 
+            return N(makeVoid)(); 
     }
 
     switch(par.b->t){
 
-    case INT :
-        return makeInt(par.z->value);
+        case N(INT) :
+            return N(makeInt)(par.z->value);
 
-    case IS :
-        return makeIS(par.i->label);
+        #ifdef SECURE
+        case SI :
+            return makeSI(par.i->arg);
+        #endif
     
-    case BOOLEAN :
-        return par;
+        case N(BOOLEAN) :
+            return par;
     
-    case LAM :{
-        Value out;
-        Value body = copyvalue(par.l->body);
-        out.l = (struct Lambda*) malloc(sizeof(struct Lambda));
-        out.l->t            = LAM;
-        out.l->body         = body;
-        out.l->nargs        = par.l->nargs;
-        out.l->arguments    = (Value *) malloc((out.l->nargs)*(sizeof(Value)));
-        for(int i           = 0; i < par.l->nargs; i++){
-            out.l->arguments[i] = copyvalue(par.l->arguments[i]);
+        case N(LAM) :{
+            VALUE out;
+            VALUE body       = N(copyValue)(par.l->body);
+            out.l            =  MALLOC(sizeof(struct N(Lambda)));
+            out.l->t         = N(LAM);
+            out.l->body      = body;
+            out.l->nargs     = par.l->nargs;
+            out.l->arguments = MALLOC((out.l->nargs)*(sizeof(VALUE)));
+
+            for(int i = 0; i < par.l->nargs; i++){
+                out.l->arguments[i] = N(copyValue)(par.l->arguments[i]);
+            }
+
+            return out;
         }
-        return out;
-    }
 
-    case PRIM :{
-        Value out;
-        out.p            = (struct Prim*) malloc(sizeof(struct Prim));
-        out.p->t         = PRIM;
-        out.p->exec      = par.p->exec;
-        out.p->nargs     = par.p->nargs;
-        out.p->arguments = (Value *) malloc((out.p->nargs)*(sizeof(Value)));
-        for(int i = 0; i < par.p->nargs; i++){
-            out.p->arguments[i] = copyvalue(par.p->arguments[i]);
+        case N(PRIM) :{
+            VALUE out;
+            out.p            = MALLOC(sizeof(struct N(Prim)));
+            out.p->t         = N(PRIM);
+            out.p->exec      = par.p->exec;
+            out.p->nargs     = par.p->nargs;
+            out.p->arguments = MALLOC((out.p->nargs)*(sizeof(VALUE)));
+
+            for(int i = 0; i < par.p->nargs; i++){
+                out.p->arguments[i] = N(copyValue)(par.p->arguments[i]);
+            }
+
+            return out;
         }
-        return out;
-    }
 
-    case SYMBOL :
-        return makeSymbol(par.s->name);
+        case N(SYMBOL) :
+            return N(makeSymbol)(par.s->name);
 
-    case APPLICATION : COPY_(Application,APPLICATION,a,par,arguments)
+        case N(APPLICATION) : COPY_(Application,APPLICATION,a,par,arguments)
 
-    case IF :
-        return makeIf(copyvalue(par.f->cond),copyvalue(par.f->cons),copyvalue(par.f->alt));
+        case N(IF) :
+            return N(makeIf)(N(copyValue)(par.f->cond),N(copyValue)(par.f->cons),N(copyValue)(par.f->alt));
     
-    case CLOSURE :
-        return makeClosure(copyvalue(par.c->lambda),par.c->env);
+        case N(CLOSURE) :
+            return N(makeClosure)(N(copyValue)(par.c->lambda),par.c->env);
 
-    case CONTINUATION :
-        return makeContinuation(par.k->kstar); // TODO copy ?
+        case N(CONTINUATION) :
+            return N(makeContinuation)(par.k->kstar); 
 
-    case CALLCC :
-        return makeCallcc(copyvalue(par.cc->function));
+        case N(CALLCC) :
+            return N(makeCallcc)(N(copyValue)(par.cc->function));
 
-    case SET :
-        return makeSet(copyvalue(par.sv->var),copyvalue(par.sv->value)); 
+        case N(SET) :
+            return N(makeSet)(N(copyValue)(par.sv->var),N(copyValue)(par.sv->value)); 
     
-    case LET :
-        return makeLet(copyvalue(par.lt->var),copyvalue(par.lt->expr),copyvalue(par.lt->body));
+        case N(LET) :
+            return N(makeLet)(N(copyValue)(par.lt->var),N(copyValue)(par.lt->expr),N(copyValue)(par.lt->body));
     
-    case LETREC : {
-        Value out;
-        out.lr        = (struct Letrec *) malloc(sizeof(struct Letrec));
-        out.lr->t     = LETREC;
-        out.lr->nargs = par.lr->nargs;
-        out.lr->body  = copyvalue(par.lr->body);
-        out.lr->vars  = (Value *) malloc((out.lr->nargs)*(sizeof(Value)));
-        out.lr->exprs  = (Value *) malloc((out.lr->nargs)*(sizeof(Value)));
-        for(int i = 0; i < out.lr->nargs; i++){
-            out.lr->vars[i] = copyvalue(par.lr->vars[i]);
+        case N(LETREC) : {
+            VALUE out;
+            out.lr         = MALLOC(sizeof(struct N(Letrec)));
+            out.lr->t      = N(LETREC);
+            out.lr->nargs  = par.lr->nargs;
+            out.lr->body   = N(copyValue)(par.lr->body);
+            out.lr->vars   = MALLOC((out.lr->nargs)*(sizeof(VALUE)));
+            out.lr->exprs  = MALLOC((out.lr->nargs)*(sizeof(VALUE)));
+
+            for(int i = 0; i < out.lr->nargs; i++){
+                out.lr->vars[i] = N(copyValue)(par.lr->vars[i]);
+            }
+
+            for(int i = 0; i < out.lr->nargs; i++){
+                out.lr->exprs[i] = N(copyValue)(par.lr->exprs[i]);
+            }
+
+            return out;
         }
-        for(int i = 0; i < out.lr->nargs; i++){
-            out.lr->exprs[i] = copyvalue(par.lr->exprs[i]);
+
+        case N(BEGIN) : COPY_(Begin,BEGIN,bg,par,stmts)
+
+        case N(CAR) : 
+            return N(makeCar)(N(copyValue)(par.car->arg));
+
+        case N(CDR) :
+            return N(makeCdr)(N(copyValue)(par.cdr->arg));
+    
+        case N(CONS) :
+            return N(makeCons)(N(copyValue)(par.cons->arg),N(copyValue)(par.cons->arg2));
+
+        case N(LIST) : {
+            VALUE out;
+            out.ls         = MALLOC(sizeof(struct N(List)));
+            out.ls->t      = N(LIST);
+            out.ls->islist = par.ls->islist;
+            out.ls->nargs  = par.ls->nargs;
+            out.ls->args   = MALLOC((out.ls->nargs)*(sizeof(VALUE)));
+
+            for(int i = 0; i < par.ls->nargs; i++){
+                out.ls->args[i] = N(copyValue)(par.ls->args[i]);
+            }
+            return out;
         }
-        return out;
-    }
 
-    case BEGIN : COPY_(Begin,BEGIN,bg,par,stmts)
-
-    case CAR :
-        return makeCar(copyvalue(par.car->arg));
-
-    case CDR :
-        return makeCdr(copyvalue(par.cdr->arg));
+        case N(QUOTE) :
+            return N(makeQuote)(N(copyValue)(par.q->arg));
     
-    case CONS :
-        return makeCons(copyvalue(par.cons->arg),copyvalue(par.cons->arg2));
-
-    case LIST : {
-        Value out;
-        out.ls            = (struct List*) malloc(sizeof(struct List));
-        out.ls->t         = LIST;
-        out.ls->islist  = par.ls->islist;
-        out.ls->nargs   = par.ls->nargs;
-        out.ls->args = (Value *) malloc((out.ls->nargs)*(sizeof(Value)));
-        for(int i = 0; i < par.ls->nargs; i++){
-            out.ls->args[i] = copyvalue(par.ls->args[i]);
-        }
-        return out;
-    }
-
-
-    case QUOTE :
-        return makeQuote(copyvalue(par.q->arg));
+        case N(PAIRQ) :
+            return N(makePairQ)(N(copyValue)(par.pq->arg));
     
-    case PAIRQ :
-        return makePairQ(copyvalue(par.pq->arg));
-    
-    case LISTQ :
-        return makeListQ(copyvalue(par.lq->arg));
+        case N(LISTQ) :
+            return N(makeListQ)(N(copyValue)(par.lq->arg));
 
-    case DEFINE :
-        return makeDefine(copyvalue(par.d->var),copyvalue(par.d->expr));
+        case N(DEFINE) :
+            return N(makeDefine)(N(copyValue)(par.d->var),N(copyValue)(par.d->expr));
 
-    case NULLQ :
-        return makeNullQ(copyvalue(par.nq->arg));
+        case N(NULLQ) :
+        return N(makeNullQ)(N(copyValue)(par.nq->arg));
 
-      default :
-         DEBUG_PRINT(("Could not Copy !!!"))
-         exit(1);
+        default :
+            DEBUG_PRINT(("Could not Copy !!!"))
+            exit(1);
 }}
+
+

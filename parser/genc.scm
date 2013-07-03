@@ -197,6 +197,7 @@
 (define (create-result emit expr)
     ; parse
     (define parseresult  (buildi expr 0 #t))
+    (emit "#ifndef SECURE")
     (emit "#include <stdlib.h>")
     (emit "#include <stdio.h>")
     (emit "#include \"scheme.h\"")
@@ -213,6 +214,7 @@
      "}\n"
      "int getinput_n(){ return " (number->string (length expr)) ";}\n"
      ))
+    (emit "#endif")
      
     (when outside 
         (with-output-to-file "temp.gen"

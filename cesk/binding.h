@@ -33,6 +33,6 @@ typedef struct N(Binding_t) {
  *  Functionality
  *-----------------------------------------------------------------------------*/
 FUNCTIONALITY void N(insertBinding)(BINDING **,char *,int);
-FUNCTIONALITY int N(getBinding)(BINDING *,const char *);
+FUNCTIONALITY int N(getBinding)(BINDING *,char *);
 FUNCTIONALITY BINDING * N(copyBinding)(BINDING *);
 

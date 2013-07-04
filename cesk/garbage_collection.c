@@ -104,8 +104,11 @@ FUNCTIONALITY void N(freeValue)(VALUE * par){
     
     switch(par->tt){
 
+        case N(NOP):
         case N(VOID):
             return;
+
+        default : break;
     }
 
     switch(par->b->t){

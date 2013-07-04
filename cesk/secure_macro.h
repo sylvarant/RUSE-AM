@@ -16,8 +16,6 @@
 #ifndef SECURE_MACRO_INCLUDED
 #define SECURE_MACRO_INCLUDED
 
-// reinstall
-#define SECURE
 
 /*-----------------------------------------------------------------------------
  *  Modifiers

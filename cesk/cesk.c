@@ -74,7 +74,7 @@ LOCAL void debugState(){
     DEBUG_PRINT(("** CONTROL")) 
 
     char * ctrl = N(toString)(mystate->control,false);
-    DEBUG_PRINT((ctrl)) 
+    DEBUG_PRINT(("%s",ctrl)) 
     free(ctrl);
     DEBUG_PRINT(("** STORES : %d",mystate->free_adr)) 
     for(int i = 0; i < mystate->free_adr; i++){
@@ -124,7 +124,7 @@ LOCAL unsigned int isAtom(VALUE el)
                             #endif
                         };
     if(el.tt == N(VOID)) return 1;
-    for(int i = 0; i < NELEMS(atoms); i++){ 
+    for(unsigned int i = 0; i < NELEMS(atoms); i++){ 
         if(el.b->t == atoms[i]){return 1;}
     }
     return 0;
@@ -145,12 +145,14 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         case N(NOP):
         case N(VOID) :
             return atom;
+
+        default : break;
     }
 
     switch(atom.b->t){
 
     case N(SYMBOL) :{
-        int adress = (int) N(getBinding)(mystate->env,(const char *) atom.s->name); 
+        int adress = (int) N(getBinding)(mystate->env,atom.s->name); 
 
         if(adress == -1){ 
             DEBUG_PRINT(("Storage failure for %s",atom.s->name))
@@ -168,6 +170,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             DEBUG_PRINT(("Unintialized Binding to %s",atom.s->name))
             exit(1);
         }
+        DEBUG_PRINT(("result == %s",N(toString)(res,false))) 
         return res;
     }
 
@@ -249,6 +252,8 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
                 mystate->free_adr++;
                 return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ptr,makeIS(c))),N(makeSymbol)("a")));
             }
+
+            default : break;
         }
 
         DEBUG_PRINT(("Failed"))
@@ -267,7 +272,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         val.b = secure_eval(atom.i->label);  
 
         // TODO does this leak information ?
-        if(val.b == -1){
+        if(val.b == NULL){
             DEBUG_PRINT(("Invalid Label"))
             exit(1);
         }
@@ -432,8 +437,9 @@ LOCAL LIMBO step()
                 argum[i] = evalAtom(mystate->control.a->arguments[i]);
             }
 
-            LIMBO res = apply(argum[0],(++argum));
-            free(--argum);
+            VALUE * rest = argum + 1;
+            LIMBO res = apply(argum[0],(rest));
+            free(argum);
             return res;
         }
 
@@ -446,7 +452,7 @@ LOCAL LIMBO step()
 
         case N(SET) : {
             VALUE val = evalAtom(mystate->control.sv->value);
-            int adress = N(getBinding)(mystate->env,(const char *) mystate->control.sv->var.s->name); 
+            int adress = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM 
             VALUE empty = N(makeNop());
@@ -457,15 +463,15 @@ LOCAL LIMBO step()
         
             // TODO keep ?
             if( mystate->control.d->var.s->t != N(SYMBOL)) {DEBUG_PRINT(("Expected Symbol !!")) exit(1);}
-            int test = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
+            int test = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
 
             if(test == -1){ 
-                N(insertBinding)(&mystate->env,(const char *)mystate->control.d->var.s->name,mystate->free_adr++);
+                N(insertBinding)(&mystate->env,mystate->control.d->var.s->name,mystate->free_adr++);
             }        
 
             // once binding exists preform set
             VALUE val = evalAtom(mystate->control.d->expr);
-            int adress = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
+            int adress = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM
             VALUE empty = N(makeNop());
@@ -490,7 +496,7 @@ LOCAL LIMBO step()
 
 		    // update enviroment with new adresses for each variable of lambda
             for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-                N(insertBinding)(&mystate->env,(const char *)mystate->control.lr->vars[i].s->name,j); 
+                N(insertBinding)(&mystate->env,mystate->control.lr->vars[i].s->name,j); 
                 i++;
             }
 
@@ -717,9 +723,14 @@ ENTRYPOINT void * secure_eval(int label){
         VALUE in = steprec();
 
         // No Heap
-        if(in.tt == N(VOID)){
-            OTHERVALUE empty = {0};
-            return empty.b;
+        switch(in.tt){
+            case N(VOID) :
+                return OTHERN(makeVoid)().b;
+            case N(NOP) :
+                return OTHERN(makeNop)().b;
+
+            default : break;
+            
         }
     
         // Descriptors
@@ -763,13 +774,15 @@ ENTRYPOINT void * secure_eval(int label){
                 DEBUG_PRINT(("Return :: Adding Label == %d \\ \t for member %s",c,N(toString)(mystate->storage[c],false)))
                 return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
             }
+
+            default : break;
         }
 
         DEBUG_PRINT(("Invalid Return Value"))
         exit(1); 
     }
 
-    return -1;
+    return NULL;
 }
 #endif
 
@@ -825,7 +838,7 @@ LOCAL void run (void ** program,int c){
  *  Todo       :    implement conversion of arguments, preferably through file reads
  * =====================================================================================
  */
-int main(int argc, char * argv[]){
+int main(void){
 
     DEBUG_PRINT(("Taking input")) 
     inject();

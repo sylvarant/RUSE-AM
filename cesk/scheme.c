@@ -563,8 +563,11 @@ FUNCTIONALITY VALUE N(copyValue)(VALUE par){
     // No heap involved
     switch(par.tt){
 
+        case N(NOP) :
         case N(VOID) : 
             return N(makeVoid)(); 
+
+        default : break;
     }
 
     switch(par.b->t){

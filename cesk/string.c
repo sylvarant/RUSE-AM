@@ -148,6 +148,8 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
             return str;
         }
 
+        default : break;
+
     }
 
     switch(par.b->t){

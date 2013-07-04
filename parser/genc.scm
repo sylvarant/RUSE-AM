@@ -207,7 +207,7 @@
      " VALUE * ret = malloc(c * (sizeof(VALUE)));\n" 
      (string-join parseresult "\n")
     (if outside "sload();\n" "")
-     " return ret;\n"
+     " return (void **) ret;\n"
      "}\n"
      "int getinput_n(){ return " (number->string (length expr)) ";}\n"
      ))

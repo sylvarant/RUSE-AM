@@ -24,7 +24,7 @@
  *  Description:    return an element from a given environment for a given key
  * =====================================================================================
  */
-FUNCTIONALITY int N(getBinding)(BINDING * ls, const char * key)
+FUNCTIONALITY int N(getBinding)(BINDING * ls,char * key)
 {
     BINDING * node = ls;
     while(node) {

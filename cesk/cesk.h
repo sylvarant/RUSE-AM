@@ -25,6 +25,7 @@
 
 // load secure header
 #include "undefine.h"
+#define SECURE
 #include "secure_macro.h"
 #include "scheme.h"
 

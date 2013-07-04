@@ -564,6 +564,7 @@ FUNCTIONALITY VALUE N(copyValue)(VALUE par){
     switch(par.tt){
 
         case N(NOP) :
+            return N(makeNop());
         case N(VOID) : 
             return N(makeVoid)(); 
 

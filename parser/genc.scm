@@ -83,6 +83,9 @@
 (define (c-gener exp in)
     (match exp
 
+    ; nop
+        ['_undef "N(makeNop)()"]
+
     ; void
         ['void (if in "makeVoid()" "N(makeVoid)()")]
     ; nil
@@ -301,7 +304,7 @@
     [`(set! ,v ,exp)
       (normalize-name exp (λ (t)
        `(let ([,(gensym '_) (set! ,v ,t)])
-          ,(k '(void)))))]
+          ,(k '(_undef)))))]
 
     ; letrec
     [`(letrec () ,exp)
@@ -358,7 +361,7 @@
     ;definition 
     [`(define ,v ,exp)  (normalize-name exp (λ (t)
                             `(let ([,(gensym '_) (define ,v ,t)])
-                                ,(k '(void)))))]
+                                ,(k '(_undef)))))]
     
     ; application
     [`(,f . ,e*) 

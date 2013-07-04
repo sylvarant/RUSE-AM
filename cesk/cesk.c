@@ -123,7 +123,7 @@ LOCAL unsigned int isAtom(VALUE el)
                                 IS
                             #endif
                         };
-    if(el.tt == N(VOID)) return 1;
+    if(el.tt == N(VOID) || el.tt == N(NOP)) return 1;
     for(unsigned int i = 0; i < NELEMS(atoms); i++){ 
         if(el.b->t == atoms[i]){return 1;}
     }
@@ -319,7 +319,10 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
 		    mystate->storage[mystate->free_adr] = N(copyValue)(val); // MEM : Don't clear  
 		    mystate->free_adr++;
             //sfreevalue(&mystate->control);  
+            
 		    mystate->control  = lk->expr;
+
+            DEBUG_PRINT(("$updrise em = %s",N(toString)(lk->expr,false)))
 		    mystate->env      = lk->e;
 		    mystate->cont     = lk->next;
             LIMBO ret   = {NULL};
@@ -475,6 +478,7 @@ LOCAL LIMBO step()
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM
             VALUE empty = N(makeNop());
+            DEBUG_PRINT(("$updrise em = %s",N(toString)(empty,false)))
             return applyKont(empty,mystate->cont);
         }
 

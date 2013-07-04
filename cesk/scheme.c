@@ -578,7 +578,10 @@ FUNCTIONALITY VALUE N(copyValue)(VALUE par){
 
         #ifdef SECURE
         case SI :
-            return makeSI(par.i->arg);
+            return makeSI(par.i->arg); //TODO resolve copying of arg
+        #else
+        case IS : 
+            return makeIS(par.i->label);
         #endif
     
         case N(BOOLEAN) :

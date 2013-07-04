@@ -184,6 +184,16 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
             sprintf(str,"%s%s)",si,cont);
             return str;
         }
+        #else
+        case IS : {
+            char * start = "(IS ";
+            int sstart = strlen(start);
+            int stringsize = 4;
+            if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 4);   
+            char * str = (char *) malloc(sizeof(char) * (stringsize + sstart));
+            sprintf(str,"%s%d)",start,par.z->value);
+            return str;
+        }
         #endif
 
         case N(LAM) : {

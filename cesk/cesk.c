@@ -115,7 +115,7 @@ LOCAL void debugState(){
  */
 LOCAL unsigned int isAtom(VALUE el)
 {
-    enum STag atoms[] = {   N(LAM),N(INT),N(SYMBOL),N(BOOLEAN),N(PRIM),
+    enum N(Tag) atoms[] = {   N(LAM),N(INT),N(SYMBOL),N(BOOLEAN),N(PRIM),
                             N(LIST),N(QUOTE),N(CLOSURE),
                             #ifdef SECURE
                                 SI
@@ -259,7 +259,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         VALUE val;
 
 		// make Continue continuation
-        mystate->cont = N(makeKCont)(mystate->env,mystate-cont);
+        mystate->cont = N(makeKCont)(mystate->env,mystate->cont);
 		
         // Call the outside
         val.b = secure_eval(atom.i->label);  
@@ -319,14 +319,14 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
             return ret;
         }
 
-        case SKRET :{
+        case N(KRET) :{
             mystate->cont    = k.r->next;     
             mystate->control = val;
             LIMBO ret  = {.answer = val};
             return ret;
         }
 
-        case SKCONTINUE : {
+        case N(KCONTINUE) : {
             mystate->control = val;
             mystate->cont    = k.c->next;
             mystate->env     = k.c->e;
@@ -661,7 +661,6 @@ LOCAL VALUE steprec (){
     }
 }
 
-
 #ifdef SECURE
 
 /* 
@@ -759,6 +758,12 @@ ENTRYPOINT void * secure_eval(int label){
 
     return -1;
 }
+#endif
+
+
+#ifndef
+
+
 #endif
 
 /*

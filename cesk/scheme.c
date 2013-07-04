@@ -428,7 +428,7 @@ FUNCTIONALITY VALUE N(makeList)(int c,VALUE args,...){
     va_start(arguments, args); 
     VALUE v;
 
-    v.ls         = MALLOC(sizeof(struct SList));
+    v.ls         = MALLOC(sizeof(struct N(List)));
     v.ls->t      = N(LIST);
     v.ls->islist = 1;
     v.ls->nargs  = c;
@@ -451,7 +451,7 @@ FUNCTIONALITY VALUE N(makeList)(int c,VALUE args,...){
  */
 FUNCTIONALITY VALUE N(makeNIL)(void){
     VALUE v;
-    v.ls         = MALLOC(sizeof(struct SList));
+    v.ls         = MALLOC(sizeof(struct N(List)));
     v.ls->t      = N(LIST);
     v.ls->nargs  = 0;
     v.ls->islist = 1;

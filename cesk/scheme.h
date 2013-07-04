@@ -20,8 +20,6 @@
 #include <stdio.h>
 
 #include "binding.h" // adds global !
-#include "continuation.h"
-#include "scheme.h" // TODO resolve
 
 /*-----------------------------------------------------------------------------
  *  Preprocessing
@@ -62,6 +60,19 @@ enum N(Tag) {
     #endif
 };
 
+// Continuationt tags
+enum N(KTag) {N(KLET),N(KRET),N(KCONTINUE)};
+
+/*-----------------------------------------------------------------------------
+ * A Union of Continuations to save space
+ *-----------------------------------------------------------------------------*/
+
+typedef union N(Kont_u){
+    void * empty;
+    struct N(KLet) * l;  
+    struct N(KRet) * r;
+    struct N(KCont) * c;
+}KONT;
 
 /*-----------------------------------------------------------------------------
  * Union of Descriptors
@@ -98,6 +109,7 @@ typedef union N(Value_u) {
         struct IS * i;
     #endif
 } VALUE;
+
 
 // Type of Primitive operation
 typedef VALUE (* N(PrimOp)) (VALUE,VALUE);
@@ -214,9 +226,31 @@ struct SI{
 struct IS{
     enum N(Tag) t;
     int label;
-}
+};
 #endif
   
+/*-----------------------------------------------------------------------------
+ * Continuation Structure Definitions
+ *-----------------------------------------------------------------------------*/
+
+struct N(KRet){
+    enum N(KTag) t;
+    KONT next; 
+};
+
+struct N(KCont){
+    enum N(KTag) t;
+	BINDING * e;
+    KONT next; 
+};
+
+struct N(KLet){
+    enum N(KTag) t;
+    VALUE var;
+	VALUE expr;
+	BINDING * e;
+    KONT next; 
+};
 
 
 /*-----------------------------------------------------------------------------
@@ -250,6 +284,11 @@ FUNCTIONALITY VALUE N(makeNullQ)(VALUE);
 FUNCTIONALITY VALUE N(makeDefine)(VALUE,VALUE);
 FUNCTIONALITY VALUE N(makeContinuation)(KONT);
 FUNCTIONALITY VALUE N(makeClosure)(VALUE,BINDING *);
+
+// continuations
+FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
+FUNCTIONALITY KONT N(makeKCont)(BINDING*,KONT);
+FUNCTIONALITY KONT N(makeKRet)(KONT);
 
 // boundary
 #ifdef SECURE

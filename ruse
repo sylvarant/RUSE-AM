@@ -35,7 +35,7 @@ load()
     # replace a
     grep -B 9999999 "REPLACE" buildsrc/cesk.c > temp.clean
     if  cat temp.gen >> temp.clean 2>/dev/null ; then 
-        mv temp.clean buildsrc/scesk.c
+        mv temp.clean buildsrc/cesk.c
         # clean up
         rm temp.gen 
     fi

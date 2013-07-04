@@ -13,7 +13,8 @@
  * =====================================================================================
  */
 
-#ifndef SCHEME_INCLUDED // TODO genralize
+
+// No protections double includes allowed
 #define SCHEME_INCLUDED
 
 #include <stdbool.h> // TODO if SPM ?
@@ -44,6 +45,9 @@ enum N(Tag) {
 
     // Trick to identify Unalocated VALUE's 
     N(ERROR),
+
+    // Do nothing
+    N(NOP),
 
     // values
     N(VOID), N(INT), N(BOOLEAN), N(CLOSURE),  N(LIST), N(QUOTE), 
@@ -270,6 +274,7 @@ FUNCTIONALITY VALUE N(makeSet)(VALUE,VALUE);
 FUNCTIONALITY VALUE N(makeLet)(VALUE,VALUE,VALUE);
 FUNCTIONALITY VALUE N(makeLetrec)(int,VALUE,VALUE,...);
 FUNCTIONALITY VALUE N(makeVoid)(void);
+FUNCTIONALITY VALUE N(makeNop)(void);
 FUNCTIONALITY VALUE N(makeBegin)(int,VALUE,...);
 FUNCTIONALITY VALUE N(makeCar)(VALUE);
 FUNCTIONALITY VALUE N(makeCdr)(VALUE);
@@ -306,4 +311,3 @@ FUNCTIONALITY VALUE N(differencePrim)(VALUE,VALUE);
 FUNCTIONALITY VALUE N(productPrim)(VALUE,VALUE);
 FUNCTIONALITY VALUE N(numequalPrim)(VALUE,VALUE);
 
-#endif

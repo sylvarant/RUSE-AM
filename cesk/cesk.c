@@ -141,7 +141,8 @@ LOCAL unsigned int isAtom(VALUE el)
 FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
     switch(atom.tt){
-
+        
+        case N(NOP):
         case N(VOID) :
             return atom;
     }
@@ -199,10 +200,11 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         DEBUG_PRINT(("@Jumping to Insecure"))
         
         // make Continue continuation 
-        mystate->cont = N(makeKCont)(mystate->env,mystate-cont);
+        mystate->cont = N(makeKCont)(mystate->env,mystate->cont);
 
         // call the outside
-        OTHERVALUE ptr = evaluate((atom.i->arg)); 
+        OTHERVALUE ptr; 
+        ptr.b = evaluate((atom.i->arg.b)); 
 
         // No Heap
         if(ptr.tt == OTHERN(VOID)){
@@ -447,7 +449,7 @@ LOCAL LIMBO step()
             int adress = N(getBinding)(mystate->env,(const char *) mystate->control.sv->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM 
-            VALUE empty = N(makeVoid());
+            VALUE empty = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
@@ -466,7 +468,7 @@ LOCAL LIMBO step()
             int adress = (int) N(getBinding)(mystate->env,(const char *) mystate->control.d->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM
-            VALUE empty = N(makeVoid());
+            VALUE empty = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
@@ -640,18 +642,27 @@ LOCAL LIMBO step()
  */
 LOCAL VALUE steprec (){
 
+    #ifdef DEBUG
+
+    #ifdef SECURE
+    char * str = "SECURE";
+    #else
+    char * str = "INSECURE";
+    #endif
+
     static int i = 0;
-    DEBUG_PRINT(("STEP# == %d of Secure",++i))
+    DEBUG_PRINT(("STEP# == %d of %s",++i,str))
     int log = i;
 
-    // output state
-    #ifdef DEBUG
-        debugState();
+    debugState();
     #endif
 
     // calculate
     LIMBO result = step(); 
-    DEBUG_PRINT(("DONE Secure STEP#== %d",log))
+
+    #ifdef DEBUG
+    DEBUG_PRINT(("DONE Secure STEP#== %d of %s",log,str))
+    #endif
 
     if(result.empty == NULL){
         return steprec();
@@ -661,7 +672,6 @@ LOCAL VALUE steprec (){
     }
 }
 
-#ifdef SECURE
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -678,10 +688,13 @@ LOCAL void inject (){
     mystate->env        = NULL;
     mystate->storage    = MALLOC(NUM_ELEMS * sizeof(VALUE)); 
     mystate->cont.empty = NULL;
+    #ifdef SECURE
     mystate->label      = NULL;
+    #endif
 	mystate->free_adr   = 0;
 }
 
+#ifdef SECURE
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -705,7 +718,7 @@ ENTRYPOINT void * secure_eval(int label){
 
         // No Heap
         if(in.tt == N(VOID)){
-            Value empty = {0};
+            OTHERVALUE empty = {0};
             return empty.b;
         }
     
@@ -761,8 +774,64 @@ ENTRYPOINT void * secure_eval(int label){
 #endif
 
 
-#ifndef
+#ifndef SECURE
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    evaluate
+ *  Description:    main entry point for the outside
+ *					argument is a pointer to deal with Sancus restriction
+ * =====================================================================================
+ */
+HOOK void * evaluate(void * v){ 
+
+	// make Return continuation
+    mystate->cont = N(makeKRet)(mystate->cont);
+    mystate->control.b = v;
+
+    // compute
+    VALUE ans  = steprec();
+	return ans.b;
+}
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    run
+ *  Description:    run the program  // TODO add to top
+ * =====================================================================================
+ */
+LOCAL void run (void ** program,int c){
+
+    mystate->control.b = program[0];
+    DEBUG_PRINT(("State has been injected")) 
+
+    for(int i = 0; i < c ; i++){
+        VALUE ans = steprec(); 
+        if(ans.tt != N(NOP)){
+            char * result = N(toString)(ans,true);
+            printf("%s\n",result);
+            free(result);
+        }
+        mystate->control.b = program[(i+1)%c]; 
+    }
+}
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    main
+ *  Description:    the startpoint
+ *  Todo       :    implement conversion of arguments, preferably through file reads
+ * =====================================================================================
+ */
+int main(int argc, char * argv[]){
+
+    DEBUG_PRINT(("Taking input")) 
+    inject();
+    run(getinput(),getinput_n());
+    return 0; 
+}
 
 #endif
 

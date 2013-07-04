@@ -13,7 +13,7 @@
  * =====================================================================================
  */
 
-#include "scheme.h" 
+#include "cesk.h" 
 #include <stdarg.h> // TODO lose dependency ?
 
 
@@ -116,18 +116,36 @@ FUNCTIONALITY VALUE N(makeBoolean)(unsigned int b) {
     return v ;
 }
 
+#ifdef SECURE
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeSI
- *  Description:    create a VALUE across the boundary
+ *  Description:    create a VALUE across the boundary to the InSecure
  * =====================================================================================
  */
-#ifdef SECURE
-extern VALUE makeSI(OTHERVALUE n) {
+FUNCTIONALITY VALUE makeSI(OTHERVALUE n) {
     VALUE v;
     v.i = MALLOC(sizeof(struct SI));
     v.i->t = SI ;
     v.i->arg = n ;
+    return v ;
+}
+
+#else
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    makeIS
+ *  Description:    create a Value across the boundary to the Secure
+ * =====================================================================================
+ */
+FUNCTIONALITY Value makeIS(int n) {
+    Value v;
+    struct IS * data = (struct IS*) malloc(sizeof(struct IS));
+    v.i = data;
+    v.i->t = IS ;
+    v.i->label = n ;
     return v ;
 }
 #endif
@@ -334,6 +352,7 @@ FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE t,...){
     return val;
 }
 
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeContinuation
@@ -349,6 +368,7 @@ FUNCTIONALITY VALUE N(makeContinuation)(KONT kstar){
     return val;
 }
 
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    makeVoid
@@ -360,6 +380,20 @@ FUNCTIONALITY VALUE N(makeVoid)(void){
     val.tt = N(VOID);
     return val;
 }
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    makeNop
+ *  Description:    create a simple no operation statement
+ * =====================================================================================
+ */
+FUNCTIONALITY VALUE N(makeNop)(void){
+    VALUE val;
+    val.tt = N(NOP);
+    return val;
+}
+
 
 /* 
  * ===  FUNCTION  ======================================================================

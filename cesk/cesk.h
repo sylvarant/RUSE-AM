@@ -16,7 +16,25 @@
 #ifndef CESK_INCLUDED
 #define CESK_INCLUDED
 
+#ifdef SECURE
+
+// load insecure header
+#include "undefine.h"
+#include "insecure_macro.h"
 #include "scheme.h"
+
+// load secure header
+#include "undefine.h"
+#include "secure_macro.h"
+#include "scheme.h"
+
+#else
+
+// insecure does not need fancy tricks
+#include "scheme.h"
+
+#endif
+
 #include "label.h"
 
 /*-----------------------------------------------------------------------------

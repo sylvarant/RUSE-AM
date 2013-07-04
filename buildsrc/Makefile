@@ -51,7 +51,7 @@ SECURE= $(INSECURE:.o=.o_S)
 	$(MCC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
 
 %.o_S: %.c
-	$(MCC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
+	$(MCC) $(CFLAGS) $(MACFLAGS) -DSECURE -c -o $@ $<	
 
 
 #============================================

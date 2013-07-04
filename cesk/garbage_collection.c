@@ -18,7 +18,10 @@
 #ifdef GARBAGE_COLLECTION_INCLUDED
 
 #include <stdarg.h> // TODO remove
+
+#ifndef ENVIRONMENT_INCLUDED
 #include "binding.h" 
+#endif
 
 /*-----------------------------------------------------------------------------
  *  Local functions

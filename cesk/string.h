@@ -14,12 +14,13 @@
  */
 
 // Only Strings in Secure when debugging
-#if defined(DEBUG) || defined(INSECURE)
+#if defined(DEBUG) || !defined(INSECURE)
 
 #ifndef STRING_INCLUDED
 #define STRING_INCLUDED
 
-#include "scheme.h" // TODO general file
+
+#include "cesk.h" 
 
 /*-----------------------------------------------------------------------------
  *  Functionality

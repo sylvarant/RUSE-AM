@@ -133,6 +133,13 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
     
     // Filter out VALUE with no contents
     switch(par.tt){ 
+
+        case N(NOP) : {
+            char * str = MALLOC(4 * sizeof(char));
+            str[0] = '\0';
+            strcat(str,"nop");
+            return str;
+        }
     
         case N(VOID) : {
             char * str = MALLOC(5 * sizeof(char));

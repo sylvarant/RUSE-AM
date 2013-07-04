@@ -201,13 +201,10 @@
     (emit "#include <stdlib.h>")
     (emit "#include <stdio.h>")
     (emit "#include \"scheme.h\"")
-    (when outside 
-        (emit "#include \"global.h\""))
-    (emit "")
     (emit (string-append 
-     "Value * getinput () {\n"
+     "void ** getinput () {\n"
      " int c = "(number->string (length expr))";\n"
-     " Value * ret = malloc(c * (sizeof(Value)));\n" 
+     " VALUE * ret = malloc(c * (sizeof(VALUE)));\n" 
      (string-join parseresult "\n")
     (if outside "sload();\n" "")
      " return ret;\n"
@@ -220,12 +217,14 @@
         (with-output-to-file "temp.gen"
             (lambda ()
                 (display (string-append  
+            "#ifdef SECURE\n"
             "ENTRYPOINT void sload(void){\n"
             " inject();\n"
             ;" int c = "(number->string (length xxpr))";\n"
             ;" VALUE * ret = MALLOC(c * (sizeof(VALUE)));\n" 
             (string-join (buildr (reverse xxpr) 0)  "\n")
-            "}\n")              
+            "}\n"
+            "#endif\n")              
     )) #:exists 'replace )))
 
 

@@ -13,7 +13,6 @@
  * =====================================================================================
  */
 
-#ifndef ENVIRONMENT_INCLUDED
 #define ENVIRONMENT_INCLUDED
 
 #include "global.h"
@@ -37,4 +36,3 @@ FUNCTIONALITY void N(insertBinding)(BINDING **,char *,int);
 FUNCTIONALITY int N(getBinding)(BINDING *,const char *);
 FUNCTIONALITY BINDING * N(copyBinding)(BINDING *);
 
-#endif

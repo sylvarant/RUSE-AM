@@ -21,6 +21,11 @@
 #include <math.h> 
 #include <string.h>
 
+
+#ifdef SECURE
+FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,bool);
+#endif
+
 /*-----------------------------------------------------------------------------
  *  Local functions
  *-----------------------------------------------------------------------------*/

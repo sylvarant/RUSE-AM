@@ -43,7 +43,7 @@ FUNCTIONALITY KONT N(makeKCont)(BINDING* env,KONT cont){
     kk.c       = MALLOC(sizeof(struct N(KCont)));
     kk.c->t    = N(KCONTINUE);
     kk.c->next = cont;
-    kk.c->e    = N(copyBinding)(env);
+    kk.c->e    = env;
     return kk;
 }
 

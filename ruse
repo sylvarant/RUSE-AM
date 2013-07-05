@@ -100,7 +100,7 @@ do
         ;;
 
     # only parsing  
-    p)  preprocess
+    p)  preprocess ${!#}
         cat buildsrc/input.c
         echo "============== Secure =================="
         load

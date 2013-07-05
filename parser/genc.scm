@@ -359,9 +359,7 @@
     [`(define (,var . ,args) ,body) `(define ,var ,(normalize-term `(λ ,args ,body)))]
 
     ;definition 
-    [`(define ,v ,exp)  (normalize-name exp (λ (t)
-                            `(let ([,(gensym '_) (define ,v ,t)])
-                                ,(k '(_undef)))))]
+    [`(define ,v ,exp)  (k `(define ,v ,(normalize-term exp)))]
     
     ; application
     [`(,f . ,e*) 

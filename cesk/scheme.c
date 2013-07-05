@@ -275,7 +275,7 @@ FUNCTIONALITY VALUE N(makeClosure)(VALUE lambda, BINDING * env){
         clos.c = MALLOC(sizeof(struct N(Closure)));
         clos.c->t      = N(CLOSURE);
         clos.c->lambda = lambda;
-        clos.c->env = N(copyBinding)(env);
+        clos.c->env = env;
 		return clos;
 }
 

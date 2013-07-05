@@ -322,7 +322,6 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
             
 		    mystate->control  = lk->expr;
 
-            DEBUG_PRINT(("$updrise em = %s",N(toString)(lk->expr,false)))
 		    mystate->env      = lk->e;
 		    mystate->cont     = lk->next;
             LIMBO ret   = {NULL};
@@ -469,6 +468,7 @@ LOCAL LIMBO step()
             int test = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
 
             if(test == -1){ 
+                DEBUG_PRINT(("ADDING to env"))
                 N(insertBinding)(&mystate->env,mystate->control.d->var.s->name,mystate->free_adr++);
             }        
 
@@ -478,7 +478,6 @@ LOCAL LIMBO step()
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = N(copyValue)(val); // MEM
             VALUE empty = N(makeNop());
-            DEBUG_PRINT(("$updrise em = %s",N(toString)(empty,false)))
             return applyKont(empty,mystate->cont);
         }
 

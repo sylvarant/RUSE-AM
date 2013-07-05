@@ -42,25 +42,17 @@ FUNCTIONALITY int N(getBinding)(BINDING * ls,char * key)
  *  Description:    add something to environment
  * =====================================================================================
  */
-FUNCTIONALITY void N(insertBinding)(BINDING ** ls,char * key,int value)
+FUNCTIONALITY void N(insertBinding)(BINDING ** head,char * key,int value)
 {
-    BINDING * node;
-    BINDING ** tmp = ls;
+    BINDING * node = MALLOC(sizeof(BINDING));
 
-    while(*tmp) {
-        if(strcmp(key,(*tmp)->key) == 0)
-            break;
-        tmp = &(*tmp)->next;
+    if(*head == NULL){
+        *head        = node;
+        (*head)->next = NULL;
+    }else{
+        node->next = (*head);
+        (*head)    = node;
     }
-
-    if(*tmp) { 
-        node = *tmp;
-    } else {
-        node = MALLOC(sizeof *node);
-        node->next = NULL;
-        *tmp = node;
-    }
-
     node->key = key;
     node->value = value;
 }

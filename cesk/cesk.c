@@ -837,6 +837,10 @@ LOCAL void run (void ** program,int c){
  */
 int main(void){
 
+    #ifdef SANCUS_SPM
+    WDTCTL = WDTPW | WDTHOLD;
+    #endif
+
     DEBUG_PRINT("Active"); 
     inject();
     run(getinput(),getinput_n());

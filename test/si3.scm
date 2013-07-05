@@ -5,7 +5,3 @@
 ))
 
 (map (IS (λ (x) x)) '(1 2 3))
-
-;(IS (define (secadd a)
-;    (+ 2 a)
-;))

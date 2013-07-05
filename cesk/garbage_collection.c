@@ -18,7 +18,10 @@
 #ifdef GARBAGE_COLLECTION_INCLUDED
 
 #include <stdarg.h> // TODO remove
+
+#ifndef ENVIRONMENT_INCLUDED
 #include "binding.h" 
+#endif
 
 /*-----------------------------------------------------------------------------
  *  Local functions
@@ -101,8 +104,11 @@ FUNCTIONALITY void N(freeValue)(VALUE * par){
     
     switch(par->tt){
 
+        case N(NOP):
         case N(VOID):
             return;
+
+        default : break;
     }
 
     switch(par->b->t){

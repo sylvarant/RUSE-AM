@@ -14,8 +14,13 @@
 #ifndef GLOBAL_INCLUDED
 #define GLOBAL_INCLUDED
 
+#include <stdlib.h> // TODO remove duplicates
 
+#ifdef SECURE
 #include "secure_macro.h"
+#else
+#include "insecure_macro.h"
+#endif
 
 /*-----------------------------------------------------------------------------
  *  DEBUGGING
@@ -30,12 +35,17 @@
 
 
 /*-----------------------------------------------------------------------------
- *  Secure Entrypoints - TODO macrofy
+ *  Secure Entrypoints 
  *-----------------------------------------------------------------------------*/
-ENTRYPOINT void * secure_eval(int seccode);
+ENTRYPOINT void * secure_eval(int);
 ENTRYPOINT void sload (void);
 
 
-//TODO at insecure Entrypoints
+/*-----------------------------------------------------------------------------
+ *  InSecure Hooks 
+ *-----------------------------------------------------------------------------*/
+HOOK void * evaluate(void *); 
+HOOK void ** getinput(void); 
+HOOK int getinput_n(void);
 
 #endif

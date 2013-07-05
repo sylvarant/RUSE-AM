@@ -28,16 +28,14 @@ load()
 {
     
     # copy all cesk to buildsrc - rewriting strategy ?
-    cp cesk/*.c buildsrc
-    cp cesk/*.h buildsrc
+    cp -p cesk/*.c buildsrc
+    cp -p cesk/*.h buildsrc
 
-    cp scesk/*.c buildsrc/
-    cp -p scesk/*.h buildsrc/
 
     # replace a
-    grep -B 9999999 "REPLACE" buildsrc/scesk.c > temp.clean
+    grep -B 9999999 "REPLACE" buildsrc/cesk.c > temp.clean
     if  cat temp.gen >> temp.clean 2>/dev/null ; then 
-        mv temp.clean buildsrc/scesk.c
+        mv temp.clean buildsrc/cesk.c
         # clean up
         rm temp.gen 
     fi
@@ -102,7 +100,7 @@ do
         ;;
 
     # only parsing  
-    p)  preprocess
+    p)  preprocess ${!#}
         cat buildsrc/input.c
         echo "============== Secure =================="
         load

@@ -19,7 +19,7 @@
 #ifndef GARBAGE_COLLECTION_INCLUDED
 #define GARBAGE_COLLECTION_INCLUDED
 
-#include "sscheme.h" // TODO general file
+#include "cesk.h" // TODO general file
 
 /*-----------------------------------------------------------------------------
  *  Functionality

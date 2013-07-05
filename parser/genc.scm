@@ -83,6 +83,9 @@
 (define (c-gener exp in)
     (match exp
 
+    ; nop
+        ['_undef "N(makeNop)()"]
+
     ; void
         ['void (if in "makeVoid()" "N(makeVoid)()")]
     ; nil
@@ -197,33 +200,34 @@
 (define (create-result emit expr)
     ; parse
     (define parseresult  (buildi expr 0 #t))
+    (emit "#ifndef SECURE")
     (emit "#include <stdlib.h>")
     (emit "#include <stdio.h>")
     (emit "#include \"scheme.h\"")
-    (when outside 
-        (emit "#include \"global.h\""))
-    (emit "")
     (emit (string-append 
-     "Value * getinput () {\n"
+     "void ** getinput () {\n"
      " int c = "(number->string (length expr))";\n"
-     " Value * ret = malloc(c * (sizeof(Value)));\n" 
+     " VALUE * ret = malloc(c * (sizeof(VALUE)));\n" 
      (string-join parseresult "\n")
     (if outside "sload();\n" "")
-     " return ret;\n"
+     " return (void **) ret;\n"
      "}\n"
      "int getinput_n(){ return " (number->string (length expr)) ";}\n"
      ))
+    (emit "#endif")
      
     (when outside 
         (with-output-to-file "temp.gen"
             (lambda ()
                 (display (string-append  
+            "#ifdef SECURE\n"
             "ENTRYPOINT void sload(void){\n"
             " inject();\n"
             ;" int c = "(number->string (length xxpr))";\n"
             ;" VALUE * ret = MALLOC(c * (sizeof(VALUE)));\n" 
             (string-join (buildr (reverse xxpr) 0)  "\n")
-            "}\n")              
+            "}\n"
+            "#endif\n")              
     )) #:exists 'replace )))
 
 
@@ -300,7 +304,7 @@
     [`(set! ,v ,exp)
       (normalize-name exp (λ (t)
        `(let ([,(gensym '_) (set! ,v ,t)])
-          ,(k '(void)))))]
+          ,(k '(_undef)))))]
 
     ; letrec
     [`(letrec () ,exp)
@@ -355,9 +359,7 @@
     [`(define (,var . ,args) ,body) `(define ,var ,(normalize-term `(λ ,args ,body)))]
 
     ;definition 
-    [`(define ,v ,exp)  (normalize-name exp (λ (t)
-                            `(let ([,(gensym '_) (define ,v ,t)])
-                                ,(k '(void)))))]
+    [`(define ,v ,exp)  (k `(define ,v ,(normalize-term exp)))]
     
     ; application
     [`(,f . ,e*) 

@@ -1,87 +1,126 @@
-#ifndef SCHEME_INCLUDED
+/*
+ * =====================================================================================
+ *
+ *       Filename:  scheme.h
+ *
+ *    Description:  The scheme language definition
+ *
+ *        Created:  06/28/2013 14:46:02
+ *
+ *         Author:  Adriaan Larmuseau, ajhl
+ *        Company:  Distrinet, Kuleuven
+ *
+ * =====================================================================================
+ */
+
+
+// No protections double includes allowed
 #define SCHEME_INCLUDED
 
-#include <stdbool.h>
+#include <stdbool.h> // TODO if SPM ?
 #include <stdio.h>
-#include "environment.h"
+
+#include "binding.h" // adds global !
 
 /*-----------------------------------------------------------------------------
- *  Macro's
+ *  Preprocessing
  *-----------------------------------------------------------------------------*/
-#define SCM_(TYPE) struct TYPE { \
-                          enum Tag t;
+#define SCM_(TYPE) struct N(TYPE) { \
+                          enum N(Tag) t;
 
 #define _SCM }; 
-#define MEM(TYPE) union Value TYPE;
-#define MEML(TYPE) union Value * TYPE;
+#define MEM(TYPE) VALUE TYPE;
+#define MEML(TYPE) VALUE * TYPE;
 #define SICM_(TYPE,N) SCM_(TYPE) \
                       MEM(N) \
                       _SCM
-
-#ifdef DEBUG
-#include <assert.h>
-# define DEBUG_PRINT(x) printf("DEBUG:: "); printf x ; printf("\n");fflush(stdout);
-#else
-# define DEBUG_PRINT(x) do {} while (0);
-#endif
 
 
 /*-----------------------------------------------------------------------------
  *  Tags
  *-----------------------------------------------------------------------------*/
-enum Tag {VOID, INT, BOOLEAN, CLOSURE, CONTINUATION, PRIM, LAM, IF, SYMBOL, APPLICATION, CALLCC, SET, LET, LETREC,
-BEGIN, CAR, CDR, CONS, LIST, QUOTE, PAIRQ, LISTQ, UNDEF, IS, DEFINE,NULLQ} ;
 
-enum KTag {KLET,KRET,KCONTINUE};
+// language elements tags
+enum N(Tag) {
 
+    // Trick to identify Unalocated VALUE's 
+    N(ERROR),
 
-// the primitive operations
-union Value;
-typedef union Value (* PrimOp) (union Value,union Value);
+    // Do nothing
+    N(NOP),
 
-/*-----------------------------------------------------------------------------
- * Preset for Language structure definitions
- *-----------------------------------------------------------------------------*/
+    // values
+    N(VOID), N(INT), N(BOOLEAN), N(CLOSURE),  N(LIST), N(QUOTE), 
 
-typedef union kont_u{
-    void * empty;
-    struct let_kont * l;  
-    struct ret_kont * r;
-    struct cont_kont * c;
-}kont;
+    // Computation
+    N(CONTINUATION), N(PRIM), N(LAM), N(IF), N(SYMBOL), N(APPLICATION), N(CALLCC), N(SET), 
+    N(LET), N(LETREC), N(BEGIN), N(CAR), N(CDR), N(CONS), N(LISTQ), N(DEFINE), N(NULLQ), N(PAIRQ),
 
-
-/*-----------------------------------------------------------------------------
- * Language Structure Definitions
- *-----------------------------------------------------------------------------*/
-
-union Value {
-    enum Tag tt;
-    struct Int * z;
-    struct Boolean * b;
-    struct Lambda * l;
-    struct Prim * p;
-    struct Symbol * s;
-    struct Application * a;
-    struct If * f;
-    struct Closure * c;
-    struct Continuation * k;
-    struct Callcc * cc;
-    struct SetV * sv;
-    struct Let * lt;
-    struct Letrec * lr;
-    struct Begin * bg;
-    struct Car * car;
-    struct Cdr * cdr;
-    struct Cons * cons;
-    struct List * ls;
-    struct Quote * q;
-    struct PairQ * pq;
-    struct ListQ * lq;
-    struct NullQ * nq;
-    struct Define * d;
-    struct IS * i;
+    // Boundary transition
+    #ifdef SECURE
+        SI
+    #else
+        IS
+    #endif
 };
+
+// Continuationt tags
+enum N(KTag) {N(KLET),N(KRET),N(KCONTINUE)};
+
+/*-----------------------------------------------------------------------------
+ * A Union of Continuations to save space
+ *-----------------------------------------------------------------------------*/
+
+typedef union N(Kont_u){
+    void * empty;
+    struct N(KLet) * l;  
+    struct N(KRet) * r;
+    struct N(KCont) * c;
+}KONT;
+
+/*-----------------------------------------------------------------------------
+ * Union of Descriptors
+ *-----------------------------------------------------------------------------*/
+
+typedef union N(Value_u) {
+    enum N(Tag) tt;
+    struct N(Int) * z;
+    struct N(Boolean) * b;
+    struct N(Lambda) * l;
+    struct N(Prim) * p;
+    struct N(Symbol) * s;
+    struct N(Application) * a;
+    struct N(If) * f;
+    struct N(Closure) * c;
+    struct N(Continuation) * k;
+    struct N(Callcc) * cc;
+    struct N(SetV) * sv;
+    struct N(Let) * lt;
+    struct N(Letrec) * lr;
+    struct N(Begin) * bg;
+    struct N(Car) * car;
+    struct N(Cdr) * cdr;
+    struct N(Cons) * cons;
+    struct N(List) * ls;
+    struct N(Quote) * q;
+    struct N(PairQ) * pq;
+    struct N(ListQ) * lq;
+    struct N(NullQ) * nq;
+    struct N(Define) * d;
+    #ifdef SECURE
+        struct SI * i;
+    #else
+        struct IS * i;
+    #endif
+} VALUE;
+
+
+// Type of Primitive operation
+typedef VALUE (* N(PrimOp)) (VALUE,VALUE);
+
+/*-----------------------------------------------------------------------------
+ * Descriptors
+ *-----------------------------------------------------------------------------*/
 
 SCM_(Int)
     int value;
@@ -97,8 +136,10 @@ SCM_(Lambda)
     MEML(arguments) 
 _SCM
 
+
+
 SCM_(Prim)
-    PrimOp exec; 
+    N(PrimOp) exec; 
     int nargs;
     MEML(arguments)
 _SCM
@@ -120,11 +161,11 @@ _SCM
 
 SCM_(Closure)
     MEM(lambda)
-    environ  * env;
+    BINDING * env;
 _SCM
 
 SCM_(Continuation)
-    kont kstar;
+    KONT kstar;
 _SCM
 
 SICM_(Callcc,function)
@@ -180,89 +221,93 @@ SCM_(List)
     MEML(args)
 _SCM
 
-SCM_(IS)
+#ifdef SECURE
+struct SI{
+    enum N(Tag) t;
+    OTHERVALUE arg;
+};
+#else
+struct IS{
+    enum N(Tag) t;
     int label;
-_SCM
+};
+#endif
   
-
 /*-----------------------------------------------------------------------------
  * Continuation Structure Definitions
  *-----------------------------------------------------------------------------*/
 
-struct ret_kont{
-    enum KTag t;
-    kont next; 
+struct N(KRet){
+    enum N(KTag) t;
+    KONT next; 
 };
 
-struct cont_kont{
-    enum KTag t;
-	environ * e;
-    kont next; 
+struct N(KCont){
+    enum N(KTag) t;
+	BINDING * e;
+    KONT next; 
 };
 
-struct let_kont{
-    enum KTag t;
-	union Value var;
-	union Value expr;
-	environ * e;
-    kont  next; 
+struct N(KLet){
+    enum N(KTag) t;
+    VALUE var;
+	VALUE expr;
+	BINDING * e;
+    KONT next; 
 };
 
 
 /*-----------------------------------------------------------------------------
- *  Functions
+ *  Functionality -> Local to scheme, entrypoints are in global.h
  *-----------------------------------------------------------------------------*/
 
-// simplifications
-typedef union Value Value ;
-
-// functionality
-extern Value evaluate(Value p);
-extern char * toString(Value,bool);
-extern void freevalue(Value *);
-extern Value copyvalue(Value par);
-
-// primitive operators
-extern Value sumPrim(Value,Value);
-extern Value differencePrim(Value,Value);
-extern Value productPrim(Value,Value);
-extern Value numequalPrim(Value,Value);
-
 // constructors
-extern Value makeInt(int n); 
-extern Value makeBoolean(unsigned int b);
-extern Value makeIf(Value a,Value b,Value c);
-extern Value makeLambda(int,Value body,...);
-extern Value makePrim(int,PrimOp,Value arg,...);
-extern Value makeSymbol(char *);
-extern Value makeApplication(int c,Value a,...);
-extern Value makeCallcc(Value f);
-extern Value makeSet(Value v,Value t);
-extern Value makeLet(Value v,Value t,Value b);
-extern Value makeLetrec(int c,Value v,Value t,...);
-extern Value makeVoid(void);
-extern Value makeBegin(int c,Value v,...);
-extern Value makeCar(Value v);
-extern Value makeCdr(Value v);
-extern Value makeCons(Value v,Value v2);
-extern Value makeList(int c,Value v,...);
-extern Value makeNIL(void);
-extern Value makePair(Value v,Value v2);
-extern Value makeQuote(Value v);
-extern Value makePairQ(Value v);
-extern Value makeListQ(Value v);
-extern Value makeNullQ(Value v);
-extern Value makeDefine(Value v,Value v2);
-extern Value makeIS(int label);
+FUNCTIONALITY VALUE N(makeInt)(int); 
+FUNCTIONALITY VALUE N(makeBoolean)(unsigned int);
+FUNCTIONALITY VALUE N(makeIf)(VALUE,VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeLambda)(int,VALUE,...);
+FUNCTIONALITY VALUE N(makePrim)(int,N(PrimOp),VALUE,...);
+FUNCTIONALITY VALUE N(makeSymbol)(char *);
+FUNCTIONALITY VALUE N(makeApplication)(int,VALUE,...);
+FUNCTIONALITY VALUE N(makeCallcc)(VALUE);
+FUNCTIONALITY VALUE N(makeSet)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeLet)(VALUE,VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeLetrec)(int,VALUE,VALUE,...);
+FUNCTIONALITY VALUE N(makeVoid)(void);
+FUNCTIONALITY VALUE N(makeNop)(void);
+FUNCTIONALITY VALUE N(makeBegin)(int,VALUE,...);
+FUNCTIONALITY VALUE N(makeCar)(VALUE);
+FUNCTIONALITY VALUE N(makeCdr)(VALUE);
+FUNCTIONALITY VALUE N(makeCons)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeList)(int,VALUE,...);
+FUNCTIONALITY VALUE N(makeNIL)(void);
+FUNCTIONALITY VALUE N(makePair)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeQuote)(VALUE);
+FUNCTIONALITY VALUE N(makePairQ)(VALUE);
+FUNCTIONALITY VALUE N(makeListQ)(VALUE);
+FUNCTIONALITY VALUE N(makeNullQ)(VALUE);
+FUNCTIONALITY VALUE N(makeDefine)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(makeContinuation)(KONT);
+FUNCTIONALITY VALUE N(makeClosure)(VALUE,BINDING *);
 
-// Internal magic
-extern Value makeContinuation(kont kstar);
-extern Value makeClosure(Value atom, environ * htbl);
-extern Value makeUndef(void);
+// continuations
+FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
+FUNCTIONALITY KONT N(makeKCont)(BINDING*,KONT);
+FUNCTIONALITY KONT N(makeKRet)(KONT);
 
-// get input - todo should this be here ?
-extern Value * getinput();
-extern int getinput_n();
-
+// boundary
+#ifdef SECURE
+FUNCTIONALITY VALUE makeSI(OTHERVALUE);
+#else
+FUNCTIONALITY VALUE makeIS(int);
 #endif
+
+// memory duplication
+FUNCTIONALITY VALUE N(copyValue)(VALUE);
+
+// math TODO probably not language specific
+FUNCTIONALITY VALUE N(sumPrim)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(differencePrim)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(productPrim)(VALUE,VALUE);
+FUNCTIONALITY VALUE N(numequalPrim)(VALUE,VALUE);
 

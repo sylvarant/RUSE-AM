@@ -1,27 +1,78 @@
 #########################################
-#     Custom MakeFile For MAC testing   #
+#     Custom MakeFile                   #
 # By Adriaan Larmuseau                  #
 #########################################
 
-# no bash no play
+
+#============================================
+# Tools
+#============================================
+
+MLD = gcc
+
+MCC = gcc
+
 SHELL := /bin/bash
 
-# program name
-NAME= ../bin/exec
+#============================================
+# Executable Targets
+#============================================
 
-# to be linked objects auto add all c objects with oneliner
-CSOURCES= $(shell find *.c | sed -e "s/\.c/.o/")
+MACEXEC= ../bin/exec
 
 
-CFLAGS= -g $(DEBOPT) $(CWARNFLAGS) -std=gnu99 -DSECURE # TODO parameterize
+#============================================
+# Flags
+#============================================
 
-all: $(CSOURCES) link
+MACFLAGS= -std=gnu99
+CFLAGS = $(DEBOPT) $(CWARNFLAGS) -g
+
+
+#============================================
+# Compilation sources
+#============================================
+
+# compile all c files in buildsrc
+SOURCE= $(shell find *.c) 
+
+# generate a set of insecure objects
+INSECURE= $(SOURCE:.c=.o)
+
+# generate a set of secure objects
+SECURE= $(INSECURE:.o=.o_S)
+
+
+#============================================
+# Compiling objects
+#============================================
+
+%.o: %.c
+	$(MCC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
+
+%.o_S: %.c
+	$(MCC) $(CFLAGS) $(MACFLAGS) -DSECURE -c -o $@ $<	
+
+
+#============================================
+# Linking
+#============================================
+
+maclink: $(INSECURE) $(SECURE)
+	$(MLD)  -o $(MACEXEC) $(SECURE) $(INSECURE) -lm # TODO remove math dependency !
+
+
+#============================================
+# Results
+#============================================
+
+all: maclink
+
+
+#============================================
+# Helpers
+#============================================
 
 clean:
-	$(RM) *.o $(NAME) *~ *.c *.h
+	$(RM) *.o* $(NAME) *~ *.c *.h *.clean
 
-link:
-	gcc  -o $(NAME) $(CSOURCES) -lm
-
-tarball:
-	tar -cf $(NAME).tar *.c *.h *.scm run Makefile 

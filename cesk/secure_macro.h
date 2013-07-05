@@ -7,7 +7,6 @@
  *
  *        Created:  06/27/2013 14:38:32
  *
- *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
  *
@@ -38,6 +37,7 @@
     #define SECRET_DATA SM_DATA(SPM_NAME) static 
     #define FUNCTIONALITY SM_FUNC(SPM_NAME) extern
     #define ENTRYPOINT SM_ENTRY(SPM_NAME) extern
+    #define HOOK extern
 
 #else 
 
@@ -46,6 +46,7 @@
     #define SECRET_DATA static
     #define FUNCTIONALITY extern
     #define ENTRYPOINT extern
+    #define HOOK extern
 
 #endif
 
@@ -87,6 +88,7 @@
 
 #define MALLOC malloc // TODO adapt
 #define OTHERMALLOC malloc
+
 
 #endif
 

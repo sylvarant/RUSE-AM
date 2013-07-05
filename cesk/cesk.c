@@ -14,7 +14,6 @@
  */
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <stdarg.h>
 
 #include "cesk.h"
@@ -73,12 +72,12 @@ LOCAL void debugState(){
     DEBUG_PRINT("=========================="); 
     DEBUG_PRINT("** CONTROL");
 
-    char * ctrl = N(toString)(mystate->control,false);
+    char * ctrl = N(toString)(mystate->control,0);
     DEBUG_PRINT("%s",ctrl); 
     free(ctrl);
     DEBUG_PRINT("** STORES : %d",mystate->free_adr); 
     for(int i = 0; i < mystate->free_adr; i++){
-        char * str =  N(toString)(mystate->storage[i],false);
+        char * str =  N(toString)(mystate->storage[i],0);
         DEBUG_PRINT("%d == %s",i,str);
         free(str);
     }
@@ -90,7 +89,7 @@ LOCAL void debugState(){
     }
     DEBUG_PRINT("** CONTINUATION"); 
     VALUE cc = N(makeContinuation)(mystate->cont);
-    DEBUG_PRINT(" --> cont type %s",N(toString)(cc,false));
+    DEBUG_PRINT(" --> cont type %s",N(toString)(cc,0));
 
     #ifdef SECURE
     DEBUG_PRINT("** FUNCTIONS"); 
@@ -354,7 +353,7 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
  */
 LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
-    DEBUG_PRINT("CALL PROCEDURE %s",N(toString)(proc,false));
+    DEBUG_PRINT("CALL PROCEDURE %s",N(toString)(proc,0));
 	if(proc.c->t == N(CLOSURE)){
 
         int curr = mystate->free_adr;
@@ -370,7 +369,7 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-            DEBUG_PRINT("Proc %d == %s",i,N(toString)((args[i]),false));
+            DEBUG_PRINT("Proc %d == %s",i,N(toString)((args[i]),0));
             mystate->storage[j] = N(copyValue)(args[i]); // MEM : Don't clear
             i++;
         }
@@ -577,7 +576,7 @@ LOCAL LIMBO step()
             VALUE v = evalAtom(mystate->control.cons->arg);
             VALUE v2 = evalAtom(mystate->control.cons->arg2);
 
-            if(v2.ls->t == N(LIST) && v2.ls->islist == true){
+            if(v2.ls->t == N(LIST) && v2.ls->islist == 1){
                 VALUE * newlist = MALLOC((v2.ls->nargs+1) * (sizeof (VALUE)));  
                 newlist[0] = v;
                 for(int i = 0; i < v2.ls->nargs; i++){
@@ -596,7 +595,7 @@ LOCAL LIMBO step()
             VALUE v = evalAtom(mystate->control.pq->arg);  
 
             if(v.ls->t == N(LIST)){
-                if(v.ls->islist == true){
+                if(v.ls->islist == 1){
                     return applyKont(N(makeBoolean)((v.ls->nargs > 0)),mystate->cont);  
                 }
                 return applyKont(N(makeBoolean)((v.ls->nargs > 1)),mystate->cont);  
@@ -769,7 +768,7 @@ ENTRYPOINT void * secure_eval(int label){
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
                 mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
-                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,N(toString)(mystate->storage[c],false));
+                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,N(toString)(mystate->storage[c],0));
                 return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
             }
 
@@ -819,7 +818,7 @@ LOCAL void run (void ** program,int c){
     for(int i = 0; i < c ; i++){
         VALUE ans = steprec(); 
         if(ans.tt != N(NOP)){
-            char * result = N(toString)(ans,true);
+            char * result = N(toString)(ans,1);
             printf("%s\n",result);
             free(result);
         }

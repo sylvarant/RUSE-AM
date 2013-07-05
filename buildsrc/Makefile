@@ -59,7 +59,7 @@ SECURE= $(INSECURE:.o=.o_S)
 #============================================
 
 maclink: $(INSECURE) $(SECURE)
-	$(MLD)  -o $(MACEXEC) $(SECURE) $(INSECURE) -lm # TODO remove math dependency !
+	$(MLD)  -o $(MACEXEC) $(SECURE) $(INSECURE) 
 
 
 #============================================

@@ -25,7 +25,7 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY char * N(toString) (VALUE,bool);
+FUNCTIONALITY char * N(toString) (VALUE,unsigned int);
 
 #endif
 #endif

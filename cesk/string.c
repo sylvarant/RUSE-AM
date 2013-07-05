@@ -18,20 +18,39 @@
 
 // TODO remove ?
 #include <stdarg.h>
-#include <math.h> 
 #include <string.h>
 
 
-#ifdef SECURE
-FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,bool);
+#ifdef SECURE // hack
+FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,unsigned int);
 #endif
 
 /*-----------------------------------------------------------------------------
  *  Local functions
  *-----------------------------------------------------------------------------*/
 
+LOCAL unsigned int nchar(int v);
 LOCAL char * generateString (char * start,int c,VALUE v,...);
 LOCAL char * generateseqString (char * start,int c,VALUE * ls,char * del);
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    nchar
+ *  Description:    returns the number of characters that make up an integer
+ * =====================================================================================
+ */
+LOCAL unsigned int nchar(int v){
+
+	int i = 0;
+
+	do{
+		i++;
+		v /= 10;
+	}while(v);
+
+	return i;
+}
 
 
 /* 
@@ -48,11 +67,11 @@ LOCAL char * generateString (char * start,int c,VALUE v,...){
 
     int sstart = strlen(start);
     char ** list = MALLOC(c*(sizeof(char *)));
-    list[0] = N(toString)(v,false);
+    list[0] = N(toString)(v,0);
     sstart   += strlen(list[0]);
 
     for(int i = 1; i < c; ++i ){
-        list[i]   = N(toString)(va_arg(arguments,VALUE),false);
+        list[i]   = N(toString)(va_arg(arguments,VALUE),0);
         sstart   += strlen(list[i]);
     }
 
@@ -95,7 +114,7 @@ LOCAL char * generateseqString(char * start,int c,VALUE * ls,char * del){
         char ** args =  MALLOC(c * (sizeof (char *)));
 
         for(int i = 0; i < c; i++){
-            args[i] = N(toString)(ls[i],false);
+            args[i] = N(toString)(ls[i],0);
             sstart  += strlen(args[i]);
         }
 
@@ -134,7 +153,7 @@ LOCAL char * generateseqString(char * start,int c,VALUE * ls,char * del){
  *  Description:    convert a VALUE into string, used to debug
  * =====================================================================================
  */
-FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
+FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
     
     // Filter out VALUE with no contents
     switch(par.tt){ 
@@ -161,7 +180,7 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
 
         case N(INT) : {
             int stringsize = 2;
-            if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 2); 
+            if(par.z->value >= 1) stringsize = (nchar(par.z->value) + 2); 
             char * str =  MALLOC(sizeof(char) * stringsize);
             sprintf(str,"%d",par.z->value);
             return str;
@@ -183,7 +202,7 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
         #ifdef SECURE
         case SI : {
             char * si = "(SI "; 
-            char * cont = OTHERN(toString)(par.i->arg,false);
+            char * cont = OTHERN(toString)(par.i->arg,0);
             int start = strlen(si)+3+strlen(cont);
             char * str = MALLOC(sizeof(char) * start); 
             sprintf(str,"%s%s)",si,cont);
@@ -194,7 +213,7 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
             char * start = "(IS ";
             int sstart = strlen(start);
             int stringsize = 4;
-            if(par.z->value >= 1) stringsize = ((int)log10(par.z->value) + 4);   
+            if(par.z->value >= 1) stringsize = (nchar(par.z->value) + 4);   
             char * str = (char *) malloc(sizeof(char) * (stringsize + sstart));
             sprintf(str,"%s%d)",start,par.z->value);
             return str;
@@ -204,13 +223,13 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
         case N(LAM) : {
             char * start = "(λ ";
             int sstart = strlen(start);
-            char * body = N(toString)(par.l->body,false);  
+            char * body = N(toString)(par.l->body,0);  
             int sbody    = strlen(body);
             char ** args = MALLOC(par.l->nargs * (sizeof (char *)));
             int sargs    =  0;
 
             for(int i = 0; i < par.l->nargs; i++){
-                args[i] = N(toString)(par.l->arguments[i],false);
+                args[i] = N(toString)(par.l->arguments[i],0);
                 sargs  += strlen(args[i]);
             }
 
@@ -291,14 +310,14 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
         case N(LETREC) : {
             char * start = "letrec([";
             int sstart = strlen(start);
-            char * body = N(toString)(par.lr->body,false);  
+            char * body = N(toString)(par.lr->body,0);  
             sstart   += strlen(body);
             char ** args = MALLOC(par.lr->nargs * (sizeof (char *)));
             char ** args2 = MALLOC (par.lr->nargs * (sizeof (char *)));
 
             for(int i = 0; i < par.lr->nargs; i++){
-                args[i] = N(toString)(par.lr->vars[i],false);
-                args2[i] = N(toString)(par.lr->exprs[i],false);
+                args[i] = N(toString)(par.lr->vars[i],0);
+                args2[i] = N(toString)(par.lr->exprs[i],0);
                 sstart  += strlen(args[i]) + strlen(args2[i]);
             }
 

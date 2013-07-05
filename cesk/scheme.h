@@ -17,7 +17,6 @@
 // No protections double includes allowed
 #define SCHEME_INCLUDED
 
-#include <stdbool.h> // TODO if SPM ?
 #include <stdio.h>
 
 #include "binding.h" // adds global !
@@ -216,7 +215,7 @@ SICM_(ListQ,arg)
 SICM_(NullQ,arg)
 
 SCM_(List)
-    int islist;
+    unsigned int islist;
     int nargs;
     MEML(args)
 _SCM

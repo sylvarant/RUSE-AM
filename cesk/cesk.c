@@ -30,7 +30,7 @@
 /*-----------------------------------------------------------------------------
  *  Local Constants
  *-----------------------------------------------------------------------------*/
-enum{NUM_ELEMS = 1024};
+enum{NUM_ELEMS = 128};
 
 /*-----------------------------------------------------------------------------
  *  Local Functions
@@ -278,8 +278,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
     #endif
 
     case N(LAM) :{
-        VALUE cpy = N(copyValue)(atom); 
-	    return N(makeClosure)(cpy,mystate->env);
+	    return N(makeClosure)(atom,mystate->env);
     }
 
 
@@ -312,14 +311,13 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
         case N(KLET) : { 
             struct N(KLet) * lk = k.l; 
             N(insertBinding)(&lk->e,lk->var.s->name,mystate->free_adr);
-		    mystate->storage[mystate->free_adr] = N(copyValue)(val); // MEM : Don't clear  
+		    mystate->storage[mystate->free_adr] = (val); // MEM : Don't clear  
 		    mystate->free_adr++;
-            //sfreevalue(&mystate->control);  
             
 		    mystate->control  = lk->expr;
-
 		    mystate->env      = lk->e;
 		    mystate->cont     = lk->next;
+            free(lk);
             LIMBO ret   = {NULL};
             return ret;
         }
@@ -328,6 +326,7 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
             mystate->cont    = k.r->next;     
             mystate->control = val;
             LIMBO ret  = {.answer = val};
+            free(k.r);
             return ret;
         }
 
@@ -335,6 +334,7 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
             mystate->control = val;
             mystate->cont    = k.c->next;
             mystate->env     = k.c->e;
+            free(k.c);
             LIMBO ret  = {NULL};
             return ret;
         }
@@ -370,15 +370,13 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < mystate->free_adr ;j++){
             DEBUG_PRINT("Proc %d == %s",i,N(toString)((args[i]),0));
-            mystate->storage[j] = N(copyValue)(args[i]); // MEM : Don't clear
+            mystate->storage[j] = (args[i]); // MEM : Don't clear
             i++;
         }
         
 		// create new state with updated storage and envorinment, control = body of lambda
-        mystate->env = N(copyBinding)(proc.c->env);
-        VALUE cpy = N(copyValue)(proc.c->lambda.l->body);
-        //sfreevalue(&mystate->control);
-        mystate->control = cpy; 
+        mystate->env = proc.c->env;
+        mystate->control = (proc.c->lambda.l->body);; 
         LIMBO ret = {NULL};
         return ret;
 	}
@@ -414,13 +412,9 @@ LOCAL LIMBO step()
             VALUE condi = evalAtom(mystate->control.f->cond);	
 
 		    if(condi.b->value == 1){
-                VALUE cpy = N(copyValue)(mystate->control.f->cons);
-                //sfreevalue(&mystate->control);
-			    mystate->control = cpy;
+			    mystate->control = (mystate->control.f->cons);
 		    }else{
-                VALUE cpy = N(copyValue)(mystate->control.f->alt);
-                //sfreevalue(&mystate->control);
-			    mystate->control = cpy;	
+			    mystate->control = (mystate->control.f->alt);;	
 		    }
 
             LIMBO ret = {NULL};
@@ -451,7 +445,7 @@ LOCAL LIMBO step()
             VALUE val = evalAtom(mystate->control.sv->value);
             int adress = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
             FREECELL((mystate->storage[adress]))
-            mystate->storage[adress] = N(copyValue)(val); // MEM 
+            mystate->storage[adress] = val; 
             VALUE empty = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
@@ -470,15 +464,15 @@ LOCAL LIMBO step()
             VALUE val = evalAtom(mystate->control.d->expr);
             int adress = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
             FREECELL((mystate->storage[adress]))
-            mystate->storage[adress] = N(copyValue)(val); // MEM
+            mystate->storage[adress] = (val); // MEM
             VALUE empty = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
         case N(LET) : {
-            VALUE a = N(copyValue)(mystate->control.lt->expr);
-            VALUE b = N(copyValue)(mystate->control.lt->var);
-            VALUE c = N(copyValue)(mystate->control.lt->body);
+            VALUE a = (mystate->control.lt->expr);
+            VALUE b = (mystate->control.lt->var);
+            VALUE c = (mystate->control.lt->body);
             //sfreevalue(&(mystate->control));
             mystate->control = a;
             mystate->cont = N(makeKLet)(b,c,mystate->env,mystate->cont);
@@ -506,12 +500,10 @@ LOCAL LIMBO step()
 
 		    // update storage with adresses pointing to arguments
             for(int j = curr,i = 0; j < mystate->free_adr ;j++,i++){
-                mystate->storage[j] = N(copyValue)(list[i]); // MEM : new adress do not delete
+                mystate->storage[j] = (list[i]); // MEM : new adress do not delete
             }
 
-            VALUE b = N(copyValue)(mystate->control.lr->body);
-            //sfreevalue(&(mystate->control));
-            mystate->control = b;
+            mystate->control = (mystate->control.lr->body);;
             LIMBO ret = {NULL};
 		    return ret;
         } 
@@ -551,7 +543,7 @@ LOCAL LIMBO step()
                     VALUE * newlist = MALLOC((val.ls->nargs-1) * (sizeof (VALUE))); 
 
                     for(int i = 1; i < val.ls->nargs; i++){
-                        newlist[(i-1)] = N(copyValue)(val.ls->args[i]); 
+                        newlist[(i-1)] = (val.ls->args[i]); 
                     }
 
                     free(val.ls->args);
@@ -580,7 +572,7 @@ LOCAL LIMBO step()
                 VALUE * newlist = MALLOC((v2.ls->nargs+1) * (sizeof (VALUE)));  
                 newlist[0] = v;
                 for(int i = 0; i < v2.ls->nargs; i++){
-                    newlist[(i+1)] = N(copyValue)(v2.ls->args[i]); 
+                    newlist[(i+1)] = (v2.ls->args[i]); 
                 }
 
                 free(v2.ls->args);
@@ -824,6 +816,9 @@ LOCAL void run (void ** program,int c){
         }
         mystate->control.b = program[(i+1)%c]; 
     }
+    free(program);
+    free(mystate->storage);
+    free(mystate);
 }
 
 

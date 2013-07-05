@@ -34,6 +34,18 @@ LOCAL char * generateString (char * start,int c,VALUE v,...);
 LOCAL char * generateseqString (char * start,int c,VALUE * ls,char * del);
 
 
+/*-----------------------------------------------------------------------------
+ *  Custom IO on Sancus
+ *-----------------------------------------------------------------------------*/
+#ifdef SANCUS_SPM
+int putchar(int c)
+{
+    P1OUT  = c;
+    P1OUT |= 0x80;
+    return c;
+}
+ #endif
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    nchar

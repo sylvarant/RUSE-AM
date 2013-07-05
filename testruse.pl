@@ -10,6 +10,7 @@ say "Testing ...";
 
 my @input = `ls test | egrep ".scm"`;
 
+
 foreach (@input){
     my $file = $_;
     my $ex = `./ruse test/$file`;
@@ -42,8 +43,7 @@ if ($i == (scalar keys %results)) {
     say "\033[1;31m". $i. " out of " . (scalar keys %results) . " succeeded\033[0m";
 }
 say "====================";
-for my $key ( sort (keys %results) ) {
+for my $key ( (keys %results) ) {
     say "$key => $results{$key}";
 }
-
 

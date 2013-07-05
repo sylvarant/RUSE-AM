@@ -15,7 +15,7 @@ spms="" # ex : a.c,b.c
 preprocess()
 { 
     #clear buildsrc
-    rm buildsrc/*.c buildsrc/*.h buildsrc/*.o 2>/dev/null
+    rm buildsrc/*.c buildsrc/*.h buildsrc/*.o buildsrc/*.o_S 2>/dev/null
 
     $cscheme parser/genc.scm < $1 > buildsrc/input.c
 
@@ -85,12 +85,13 @@ type racket >/dev/null 2>&1 || { echo -e >&2
 
 # flags
 fflag=0
+lflag=0
 vflag=0
 debopt=""
 warnopt=-w
 
 
-while getopts "pdfvwc" OPTION
+while getopts "lpdfwc" OPTION
 do
 	case $OPTION in
 
@@ -104,7 +105,7 @@ do
         cat buildsrc/input.c
         echo "============== Secure =================="
         load
-        tail buildsrc/scesk.c
+        tail buildsrc/cesk.c
         exit 0
         ;;
          
@@ -125,6 +126,11 @@ do
         warnopt="-Wall -Wextra"
         ;;
 
+	# logging
+	l) debopt=-DDEBUG
+		lflag=1
+		;;
+
 	?)	echo $Usage >&2
 		exit 1
 		;;
@@ -134,8 +140,17 @@ done
 compile ${!#}
 
 # run baby run
-if [ $vflag -eq 1 -a $fflag -eq 0 ]; then
-   valgrind --tool=memcheck --dsymutil=yes ./bin/exec 
+if [ $lflag -eq 1 ]; then
+logname="test/log/$(basename ${!#})_log"
+./bin/exec 2> $logname 
+echo >> $logname
+echo "================= INSECURE INPUT =================" >> $logname
+echo >> $logname
+cat buildsrc/input.c >> $logname
+echo >> $logname
+echo "================= SECURE INPUT =================" >> $logname
+echo >> $logname
+sed '1,/REPLACE/d' buildsrc/cesk.c >> $logname
 else
 ./bin/exec
 fi

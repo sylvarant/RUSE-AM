@@ -70,37 +70,37 @@ LOCAL void debugState(void);
  */
 LOCAL void debugState(){
 
-    DEBUG_PRINT(("==========================")) 
-    DEBUG_PRINT(("** CONTROL")) 
+    DEBUG_PRINT("=========================="); 
+    DEBUG_PRINT("** CONTROL");
 
     char * ctrl = N(toString)(mystate->control,false);
-    DEBUG_PRINT(("%s",ctrl)) 
+    DEBUG_PRINT("%s",ctrl); 
     free(ctrl);
-    DEBUG_PRINT(("** STORES : %d",mystate->free_adr)) 
+    DEBUG_PRINT("** STORES : %d",mystate->free_adr); 
     for(int i = 0; i < mystate->free_adr; i++){
         char * str =  N(toString)(mystate->storage[i],false);
-        DEBUG_PRINT(("%d == %s",i,str))
+        DEBUG_PRINT("%d == %s",i,str);
         free(str);
     }
-    DEBUG_PRINT(("** ENVIRONMENT : ")) 
+    DEBUG_PRINT("** ENVIRONMENT : "); 
     BINDING *node = mystate->env;
     while(node){
-        DEBUG_PRINT(("%s at %d ",node->key,node->value))
+        DEBUG_PRINT("%s at %d ",node->key,node->value);
         node = node->next;
     }
-    DEBUG_PRINT(("** CONTINUATION")) 
+    DEBUG_PRINT("** CONTINUATION"); 
     VALUE cc = N(makeContinuation)(mystate->cont);
-    DEBUG_PRINT((" --> cont type %s",N(toString)(cc,false)))
+    DEBUG_PRINT(" --> cont type %s",N(toString)(cc,false));
 
     #ifdef SECURE
-    DEBUG_PRINT(("** FUNCTIONS")) 
+    DEBUG_PRINT("** FUNCTIONS"); 
     Label * snode = mystate->label;
     while(snode != NULL){ 
-        DEBUG_PRINT(("--> Label == %d",snode->label))
+        DEBUG_PRINT("--> Label == %d",snode->label);
         snode = snode->next;
     }
     #endif
-    DEBUG_PRINT(("==========================")) 
+    DEBUG_PRINT("=========================="); 
 }
 
 #endif
@@ -155,11 +155,11 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         int adress = (int) N(getBinding)(mystate->env,atom.s->name); 
 
         if(adress == -1){ 
-            DEBUG_PRINT(("Storage failure for %s",atom.s->name))
-            DEBUG_PRINT(("ENVIRONMENT : ")) 
+            DEBUG_PRINT("Storage failure for %s",atom.s->name);
+            DEBUG_PRINT("ENVIRONMENT : "); 
             BINDING *node = mystate->env;
             while(node){
-                DEBUG_PRINT(("%s at %d ",node->key,node->value))
+                DEBUG_PRINT("%s at %d ",node->key,node->value);
                 node = node->next;
             }
             exit(1);
@@ -167,10 +167,9 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
         VALUE res = mystate->storage[adress]; 
         if(res.tt == N(ERROR)) {
-            DEBUG_PRINT(("Unintialized Binding to %s",atom.s->name))
+            DEBUG_PRINT("Unintialized Binding to %s",atom.s->name);
             exit(1);
         }
-        DEBUG_PRINT(("result == %s",N(toString)(res,false))) 
         return res;
     }
 
@@ -184,7 +183,6 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
 
     case N(PRIM) :{
-        DEBUG_PRINT(("Starting Primitive"))
         VALUE * parsed = MALLOC(atom.p->nargs * sizeof(VALUE));
         for(int i = 0; i < atom.p->nargs; i++){
             parsed[i] = evalAtom(atom.p->arguments[i]);
@@ -194,13 +192,12 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             sum = atom.p->exec(sum,parsed[i]); 
         }
         free(parsed);
-        DEBUG_PRINT(("Ending Primitive"))
         return sum; 
     }
 
     #ifdef SECURE
     case SI : {
-        DEBUG_PRINT(("@Jumping to Insecure"))
+        DEBUG_PRINT("@Jumping to Insecure");
         
         // make Continue continuation 
         mystate->cont = N(makeKCont)(mystate->env,mystate->cont);
@@ -248,7 +245,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
                 int c = mystate->free_adr;
                 mystate->storage[mystate->free_adr] = N(makeSymbol)("a");
                 insertLabel(&(mystate->label),mystate->free_adr);
-                DEBUG_PRINT(("Adding Label (A) == %d",c))
+                DEBUG_PRINT("Adding Label (A) == %d",c);
                 mystate->free_adr++;
                 return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ptr,makeIS(c))),N(makeSymbol)("a")));
             }
@@ -256,12 +253,12 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             default : break;
         }
 
-        DEBUG_PRINT(("Failed"))
+        DEBUG_PRINT("Failed");
         exit(1);
     }
     #else
     case IS : {
-        DEBUG_PRINT(("@Jumping to Secure"))
+        DEBUG_PRINT("@Jumping to Secure");
 
         VALUE val;
 
@@ -273,7 +270,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
         // TODO does this leak information ?
         if(val.b == NULL){
-            DEBUG_PRINT(("Invalid Label"))
+            DEBUG_PRINT("Invalid Label");
             exit(1);
         }
         
@@ -292,7 +289,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         break;
 
     default :{ 
-        DEBUG_PRINT(("Not to be used"))
+        DEBUG_PRINT("Not an Atom");
         exit(1);
     } 
    }
@@ -344,7 +341,7 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
         }
         
         default :
-            DEBUG_PRINT (("Unsupported Continuation"))
+            DEBUG_PRINT ("Unsupported Continuation");
             exit(1);
     }
 }
@@ -357,12 +354,12 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
  */
 LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
-    DEBUG_PRINT(("CALL PROCEDURE %s",N(toString)(proc,false)))
+    DEBUG_PRINT("CALL PROCEDURE %s",N(toString)(proc,false));
 	if(proc.c->t == N(CLOSURE)){
 
         int curr = mystate->free_adr;
         int nargs = proc.c->lambda.l->nargs; 
-        DEBUG_PRINT(("Proc arg == %d",nargs))
+        DEBUG_PRINT("Proc arg == %d",nargs);
         mystate->free_adr = curr + nargs; 
 
 		// update enviroment with new adresses for each variable of lambda
@@ -373,7 +370,7 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-            DEBUG_PRINT(("Proc %d == %s",i,N(toString)((args[i]),false)))
+            DEBUG_PRINT("Proc %d == %s",i,N(toString)((args[i]),false));
             mystate->storage[j] = N(copyValue)(args[i]); // MEM : Don't clear
             i++;
         }
@@ -387,11 +384,11 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
         return ret;
 	}
 	else if(proc.k->t == N(CONTINUATION)){
-        DEBUG_PRINT((">>>>> DOING CONTINUATION"))
+        DEBUG_PRINT(">>>>> DOING CONTINUATION");
 		return applyKont(args[0],proc.k->kstar);
 	}
 	else{
-		DEBUG_PRINT(("Unkown Procedure"))
+		DEBUG_PRINT("Unkown Procedure");
         exit(1);
 	}
 }
@@ -432,7 +429,6 @@ LOCAL LIMBO step()
 	    }
 
         case N(APPLICATION) : {
-            DEBUG_PRINT(("Appl arg == %d",mystate->control.a->nargs))
             VALUE * argum = MALLOC(sizeof(VALUE) * mystate->control.a->nargs);
 
             for(int i = 0; i < mystate->control.a->nargs; i++){
@@ -464,11 +460,10 @@ LOCAL LIMBO step()
         case N(DEFINE) : {
         
             // TODO keep ?
-            if( mystate->control.d->var.s->t != N(SYMBOL)) {DEBUG_PRINT(("Expected Symbol !!")) exit(1);}
+            if( mystate->control.d->var.s->t != N(SYMBOL)) {DEBUG_PRINT("Expected Symbol !!"); exit(1);}
             int test = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
 
             if(test == -1){ 
-                DEBUG_PRINT(("ADDING to env"))
                 N(insertBinding)(&mystate->env,mystate->control.d->var.s->name,mystate->free_adr++);
             }        
 
@@ -538,12 +533,12 @@ LOCAL LIMBO step()
                 if (val.ls->nargs > 0){
                     return applyKont(val.ls->args[0],mystate->cont); 
                 }else {
-                    DEBUG_PRINT(("Empty List!!"))
+                    DEBUG_PRINT("Empty List!!");
                     exit(1);
                 }
             }
             else{
-                DEBUG_PRINT(("Expected List"))
+                DEBUG_PRINT("Expected List");
                 exit(1);
             }
         }
@@ -568,12 +563,12 @@ LOCAL LIMBO step()
                     return applyKont(N(makeNIL()),mystate->cont);
                 }
                 else{
-                    DEBUG_PRINT(("Empty List!!"))
+                    DEBUG_PRINT("Empty List!!");
                     exit(1);
                 }
             }
             else{
-                DEBUG_PRINT(("Expected List"))
+                DEBUG_PRINT("Expected List");
                 exit(1);
             }
         }
@@ -607,7 +602,7 @@ LOCAL LIMBO step()
                 return applyKont(N(makeBoolean)((v.ls->nargs > 1)),mystate->cont);  
             }
             else{
-                DEBUG_PRINT(("Expected List"))
+                DEBUG_PRINT("Expected List");
                 exit(1);
             }
         }
@@ -618,7 +613,7 @@ LOCAL LIMBO step()
                 return applyKont(N(makeBoolean)(v.ls->islist),mystate->cont); 
             }
             else{
-                DEBUG_PRINT(("Expected List"))
+                DEBUG_PRINT("Expected List");
                 exit(1);
             }
         }   
@@ -629,13 +624,13 @@ LOCAL LIMBO step()
                 return applyKont(N(makeBoolean)(v.ls->nargs == 0),mystate->cont); 
             }
             else{
-                DEBUG_PRINT(("Expected List"))
+                DEBUG_PRINT("Expected List");
                 exit(1);
             }
         }   
 
         default :
-		    DEBUG_PRINT(("Unkown State"))
+		    DEBUG_PRINT("Unkown State");
             exit(1);
             break;
 
@@ -660,7 +655,7 @@ LOCAL VALUE steprec (){
     #endif
 
     static int i = 0;
-    DEBUG_PRINT(("STEP# == %d of %s",++i,str))
+    DEBUG_PRINT("STEP# == %d of %s",++i,str);
     int log = i;
 
     debugState();
@@ -670,7 +665,7 @@ LOCAL VALUE steprec (){
     LIMBO result = step(); 
 
     #ifdef DEBUG
-    DEBUG_PRINT(("DONE Secure STEP#== %d of %s",log,str))
+    DEBUG_PRINT("DONE Secure STEP#== %d of %s",log,str);
     #endif
 
     if(result.empty == NULL){
@@ -713,11 +708,11 @@ LOCAL void inject (){
  */
 ENTRYPOINT void * secure_eval(int label){
 
-    DEBUG_PRINT(("Check :: label == %d",label))
+    DEBUG_PRINT("Check :: label == %d",label);
 
     if(hasLabel(mystate->label,label)){
         mystate->control = mystate->storage[label];
-        DEBUG_PRINT(("Check Succeeded"))
+        DEBUG_PRINT("Check Succeeded");
 
         // make Return Continuation
         mystate->cont = N(makeKRet)(mystate->cont);
@@ -747,7 +742,7 @@ ENTRYPOINT void * secure_eval(int label){
                     int d = mystate->free_adr; 
                     mystate->storage[mystate->free_adr] = in.ls->args[i];
                     insertLabel(&(mystate->label),mystate->free_adr);
-                    DEBUG_PRINT(("Adding Label (A) == %d",d))
+                    DEBUG_PRINT("Adding Label (A) == %d",d);
                     mystate->free_adr++;
                     list[i] = makeIS(d);   
                 }
@@ -774,14 +769,14 @@ ENTRYPOINT void * secure_eval(int label){
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
                 mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
-                DEBUG_PRINT(("Return :: Adding Label == %d \\ \t for member %s",c,N(toString)(mystate->storage[c],false)))
+                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,N(toString)(mystate->storage[c],false));
                 return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
             }
 
             default : break;
         }
 
-        DEBUG_PRINT(("Invalid Return Value"))
+        DEBUG_PRINT("Invalid Return Value");
         exit(1); 
     }
 
@@ -820,7 +815,6 @@ HOOK void * evaluate(void * v){
 LOCAL void run (void ** program,int c){
 
     mystate->control.b = program[0];
-    DEBUG_PRINT(("State has been injected")) 
 
     for(int i = 0; i < c ; i++){
         VALUE ans = steprec(); 
@@ -843,7 +837,7 @@ LOCAL void run (void ** program,int c){
  */
 int main(void){
 
-    DEBUG_PRINT(("Taking input")) 
+    DEBUG_PRINT("Active"); 
     inject();
     run(getinput(),getinput_n());
     return 0; 

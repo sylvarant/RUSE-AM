@@ -13,7 +13,7 @@ my @input = `ls test | egrep ".scm"`;
 
 foreach (@input){
     my $file = $_;
-    my $ex = `./ruse test/$file`;
+    my $ex = `./ruse -l test/$file`;
     chomp($ex);
     open(my $fh,"test/".$file) or die("ERROR:: $!");
     my $first = <$fh>; #  no multiline answers supported yet

@@ -365,7 +365,7 @@ FUNCTIONALITY char * N(toString) (VALUE par,bool outer){
             return generateString("(define ",2,par.d->var,par.d->expr);
 
         default :
-            DEBUG_PRINT(("Could not convert Value to string!!!")) 
+            DEBUG_PRINT("Could not convert Value to string!!!"); 
             return NULL;
     }
 }

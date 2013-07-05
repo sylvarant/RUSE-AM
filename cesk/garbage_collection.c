@@ -201,7 +201,7 @@ FUNCTIONALITY void N(freeValue)(VALUE * par){
             return clearValue(2,par->d,&par->d->var,&par->d->expr);
 
         default :
-            DEBUG_PRINT(("Could not clear VALUE !!!")) 
+            DEBUG_PRINT("Could not clear VALUE !!!"); 
             return;
 }}
 

@@ -28,9 +28,10 @@
 
 #ifdef DEBUG
     #include <stdio.h>
-    #define DEBUG_PRINT(x) printf("DEBUG:: "); printf x ; printf("\n");fflush(stdout);
+    #define DEBUG_PRINT(...) \
+	do{	fprintf(stderr,"DEBUG:: "); fprintf(stderr,__VA_ARGS__); fprintf(stderr,"\n");fflush(stderr);} while(0)
 #else
-    #define DEBUG_PRINT(x) do {} while (0);
+    #define DEBUG_PRINT(...) do {} while (0)
 #endif
 
 

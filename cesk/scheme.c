@@ -702,7 +702,7 @@ FUNCTIONALITY VALUE N(copyValue)(VALUE par){
         return N(makeNullQ)(N(copyValue)(par.nq->arg));
 
         default :
-            DEBUG_PRINT(("Could not Copy !!!"))
+            DEBUG_PRINT("Could not Copy !!!");
             exit(1);
 }}
 

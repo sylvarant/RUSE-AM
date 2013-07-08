@@ -48,7 +48,7 @@ preprocess()
 
         "$ml_ext") 
             language="ml"
-            $front/ml/miniML $1 > buildsrc/input.c 2>/dev/null || { echo "Front-end failed, aborting ruse"; exit 1; }
+            $front/ml/miniml $1 > buildsrc/input.c 2>/dev/null || { echo "Front-end failed, aborting ruse"; exit 1; }
             ;;
 
     esac

@@ -1,14 +1,24 @@
 #!/usr/bin/env bash
 # Ruse front-end script
 
-Usage="Usage : `basename $0` [-ipdfvwcs] sourcefile"
 
+############################
+# Script variables
+############################
+options="slpdfwc"
+Usage="Usage : `basename $0` [-$options] sourcefile"
 cscheme=racket
 IFS=""
 spms="" # ex : a.c,b.c
+fflag=0
+lflag=0
+debopt=""
+warnopt=-w
+platform=""
 
 
 ############################
+# Function :: Preprocess
 # Preprocess the buildsrc
 #   needs the source
 ############################
@@ -22,6 +32,7 @@ preprocess()
 }
 
 ############################
+# Function :: Load
 # Build the Load Function
 ############################
 load()
@@ -42,6 +53,7 @@ load()
 }
 
 ############################
+# Function :: Fides
 # Fides generation - TODO
 ############################
 fides()
@@ -56,6 +68,7 @@ fides()
 
 
 ############################
+# Function :: Compile
 # Compile
 ############################
 compile()
@@ -65,10 +78,27 @@ compile()
     load
 
     # Makefile time
-    make -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt
+    make $platform -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 
 
+############################
+# Function :: Log
+# Log debug output
+############################
+log()
+{
+    logname="test/log/$(basename $1)_log"
+    ./bin/exec 2> $logname 
+    echo >> $logname
+    echo "================= INSECURE INPUT =================" >> $logname
+    echo >> $logname
+    cat buildsrc/input.c >> $logname
+    echo >> $logname
+    echo "================= SECURE INPUT =================" >> $logname
+    echo >> $logname
+    sed '1,/REPLACE/d' buildsrc/cesk.c >> $logname
+}
 
 #=====================================
 # Front End
@@ -80,20 +110,17 @@ if [ $# -eq 0 ]; then
 	exit 1
 fi
 
-type racket >/dev/null 2>&1 || { echo -e >&2 
-    "ERROR :: racket must be add to the PATH of the current shell\n Add PATH=\$PATH:/Applications/Racket\ <version>/bin/ to your shell rc"; exit 1; }
-
-# flags
-fflag=0
-lflag=0
-vflag=0
-debopt=""
-warnopt=-w
+type $cscheme >/dev/null 2>&1 || { echo -e >&2 
+    "ERROR :: $cscheme must be add to the PATH of the current shell\n Add PATH=\$PATH:/Applications/Racket\ <version>/bin/ to your shell rc"; exit 1; }
 
 
-while getopts "lpdfwc" OPTION
+while getopts "$options" OPTION
 do
 	case $OPTION in
+
+    # sancus as platform
+    s) platform="sancus"
+        ;;
 
     # compile
     c)  compile ${!#}
@@ -103,7 +130,9 @@ do
     # only parsing  
     p)  preprocess ${!#}
         cat buildsrc/input.c
+        echo ""
         echo "============== Secure =================="
+        echo ""
         load
         tail buildsrc/cesk.c
         exit 0
@@ -115,10 +144,6 @@ do
 
     # debug version 
     d) debopt=-DDEBUG 
-        ;;
-
-    # use valgrind -- not compatible with fides !!
-    v) vflag=1
         ;;
 
     # generate warnings
@@ -141,16 +166,8 @@ compile ${!#}
 
 # run baby run
 if [ $lflag -eq 1 ]; then
-logname="test/log/$(basename ${!#})_log"
-./bin/exec 2> $logname 
-echo >> $logname
-echo "================= INSECURE INPUT =================" >> $logname
-echo >> $logname
-cat buildsrc/input.c >> $logname
-echo >> $logname
-echo "================= SECURE INPUT =================" >> $logname
-echo >> $logname
-sed '1,/REPLACE/d' buildsrc/cesk.c >> $logname
+   log ${!#} 
 else
-./bin/exec
+    ./bin/exec
 fi
+

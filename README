@@ -1,17 +1,22 @@
 Directory structure
 ===============
 - test/ : test cases
+- test/log : detailed logs of all the tests
 - parser/ : parser
-- fides/ : fides headers and perl generators -- requires Fides support 
 - cesk/ : implementation of the CESK machine
-- scesk/ : implementation of the 2/S CESK machine
-- buildsrc/ : all files used to build the executable
-- bin/ : the executable and binary spm's
-- doc/ : documentation used to build the machine
+- buildsrc/ : all files used to build the executable contains the Makefile
+- bin/ : the executables produced through compilation
 
 Executing
 ==================
-./ruse [-idfvwsc] sourcefile
+./ruse [-slpdfwc] sourcefile
+    -s :: produce sancus executable
+    -l :: produce a log of the debug and build information in test/log
+    -d :: activate debug mode, outputs machine trace on stderr
+    -f :: Fides support - Not yet available !!
+    -p :: Preprocess the input file, outputs the results and aborts
+    -c :: Compile the input file, no execution
+    -w :: Compile with warnings
 
 Testing 
 ==================

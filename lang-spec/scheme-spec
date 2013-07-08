@@ -1,0 +1,54 @@
+;; Input language:
+
+exp ::= (let ([<var> exp] ...) exp)
+     |  (letrec ([<var> exp] ...) exp)
+     |  (if exp exp exp)
+     |  (set! <var> exp)
+     |  (begin <exp> ...)
+     |  (λ (name ...) exp)
+     |  (<exp> ...)
+     |  #t  |  #f
+     |  integer
+     |  (prim <exp> ...)
+     |  <var>        
+     |  (cons <exp> <exp>)
+     |  (car  <exp>)
+     |  (cdr  <exp>)
+     |  (quote <exp>)
+     |  (pair? <exp>)
+     |  (list? <exp>)
+     |  '()
+     |  SI <exp> / IS <exp>   
+
+;; Intermediate language:
+
+lam ::= (λ (var1 ... varN) exp)
+
+ aexp ::= lam
+       |  <var>
+       |  #t  |  #f
+       |  integer
+       |  (quote aexp)
+       |  (prim aexp1 ... aexpN)
+       |  '(aexp ...)
+       |  SI exp / IS <integer>
+       |  '()
+
+ cexp ::= (aexp0 aexp1 ... aexpN)
+       |  (if aexp exp exp)
+       |  (call/cc aexp)
+       |  (set! <var> aexp)
+       |  (begin aexp ...)
+       |  (letrec ((<var1> aexp1) ... (<varN> aexpN)) exp)
+       |  (cons aexp aexp)
+       |  (car  aexp)
+       |  (cdr  aexp)
+       |  (pair? aexp)
+       |  (list? aexp)
+
+ exp ::= aexp
+      |  cexp
+      |  (let ((<var> exp)) exp)
+
+ prim ::= +  |  -  |  *  |  =
+

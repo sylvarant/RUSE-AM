@@ -1,0 +1,56 @@
+TODO
+
+module type CORE_SYNTAX =
+sig
+type term
+type val_type
+type def_type
+type kind
+val subst_valtype: val_type -> Subst.t -> val_type
+val subst_deftype: def_type -> Subst.t -> def_type
+val subst_kind: kind -> Subst.t -> kind
+end
+
+module type CORE_TYPING =
+sig
+module Core: CORE_SYNTAX
+module Env: ENV with module Mod.Core = Core
+(* Typing functions *)
+val type_term: Env.t -> Core.term -> Core.val_type
+val kind_deftype: Env.t -> Core.def_type -> Core.kind
+val check_valtype: Env.t -> Core.val_type -> unit
+val check_kind: Env.t -> Core.kind -> unit
+(* Type matching functions *)
+val valtype_match: Env.t -> Core.val_type -> Core.val_type -> bool
+val deftype_equiv:
+Env.t -> Core.kind -> Core.def_type -> Core.def_type -> bool
+val kind_match: Env.t -> Core.kind -> Core.kind -> bool
+val deftype_of_path: path -> Core.kind -> Core.def_type
+end
+
+
+module ML =
+struct
+type term =
+    Constant of int (* integer constants *)
+    | Longident of path (* id or mod.mod...id *)
+    | Function of Ident.t * term (* fun id -> expr *)
+    | Apply of term * term (* expr(expr) *)
+    | Let of Ident.t * term * term (* let id = expr in expr *)
+type simple_type =
+    Var of type_variable (* ’a, ’b *)
+    | Typeconstr of path * simple_type list (* constructed type *)
+and type_variable =
+    { mutable repres: simple_type option;
+    (* representative, for union-find *)
+    mutable level: int } (* binding level, for generalization *)
+type val_type =
+    { quantif: type_variable list; (* quantified variables *)
+    body: simple_type } (* body of type scheme *)
+type def_type =
+    { params: type_variable list; (* list of parameters *)
+    defbody: simple_type } (* body of type definition *)
+    type kind = { arity: int }
+    (* Substitution functions omitted *)
+end
+module MLMod = Mod_syntax(ML)

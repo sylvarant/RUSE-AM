@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Ruse front-end script
 
+#TODO at language detection
 
 ############################
 # Script variables
@@ -15,6 +16,10 @@ lflag=0
 debopt=""
 warnopt=-w
 platform=""
+front="./front-end"
+language=""
+scheme_ext="scm"
+ml_ext="ml"
 
 
 ############################
@@ -27,7 +32,26 @@ preprocess()
     #clear buildsrc
     rm buildsrc/*.c buildsrc/*.h buildsrc/*.o buildsrc/*.o_S 2>/dev/null
 
-    $cscheme parser/genc.scm < $1 > buildsrc/input.c
+
+    #=====================================
+    # Multi language support
+    #=====================================
+    filename=$(basename "$1")
+    extension="${filename##*.}"
+
+    case "$extension" in
+
+        "$scheme_ext") 
+            language="scheme"
+            $cscheme $front/scheme/genc.scm < $1 > buildsrc/input.c
+            ;;
+
+        "$ml_ext") 
+            language="ml"
+            $front/ml/miniML $1 > buildsrc/input.c 2>/dev/null || { echo "Front-end failed, aborting ruse"; exit 1; }
+            ;;
+
+    esac
 
 }
 
@@ -88,7 +112,8 @@ compile()
 ############################
 log()
 {
-    logname="test/log/$(basename $1)_log"
+    # Todo make more flexible
+    logname="test/$language/log/$(basename $1)_log" 
     ./bin/exec 2> $logname 
     echo >> $logname
     echo "================= INSECURE INPUT =================" >> $logname
@@ -100,8 +125,9 @@ log()
     sed '1,/REPLACE/d' buildsrc/cesk.c >> $logname
 }
 
+
 #=====================================
-# Front End
+# Execute
 #=====================================
 
 # we want at least one parameter (it may be a flag or an argument)
@@ -110,10 +136,12 @@ if [ $# -eq 0 ]; then
 	exit 1
 fi
 
+# find racket
 type $cscheme >/dev/null 2>&1 || { echo -e >&2 
     "ERROR :: $cscheme must be add to the PATH of the current shell\n Add PATH=\$PATH:/Applications/Racket\ <version>/bin/ to your shell rc"; exit 1; }
 
 
+# get options 
 while getopts "$options" OPTION
 do
 	case $OPTION in

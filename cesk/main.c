@@ -13,6 +13,7 @@
  * =====================================================================================
  */
 
+#ifndef SECURE
 #include "global.h"
 #include "cesk.h"
 #include "load.h"
@@ -26,33 +27,6 @@
 LOCAL char * read(const char * filen);
 #endif
 
-
-
-#ifndef SECURE
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    run
- *  Description:    run the program  
- * =====================================================================================
- */
-HOOK void run (VALUE * program,int c){
-
-    mystate->control = program[0];
-
-    for(int i = 0; i < c ; i++){
-        VALUE ans = steprec(); 
-        if(ans.tt != N(NOP)){
-            char * result = N(toString)(ans,1);
-            printf("%s\n",result);
-            free(result);
-        }
-        mystate->control = program[(i+1)%c]; 
-    }
-    free(program);
-    free(mystate->storage);
-    free(mystate);
-}
 
 
 #ifdef BYTE

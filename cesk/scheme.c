@@ -200,23 +200,12 @@ FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,VALUE *ls){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
-
-    va_list arguments;
-    va_start(arguments, arg); 
-
     VALUE v;
     v.p = MALLOC(sizeof(struct N(Prim)));
     v.p->t = N(PRIM);
     v.p->exec  = ex;
     v.p->nargs = c;
-    VALUE * list = MALLOC(c*(sizeof(VALUE)));
-    list[0] = arg;
-
-    for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,VALUE);
-
-    va_end(arguments);
-    v.p->arguments = list;
+    v.p->arguments = ls;
     return v;
 }
 
@@ -227,22 +216,11 @@ FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
  *  Description:    create a Application VALUE with c arguments
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE * a){
-    
-    va_list arguments;
-    va_start(arguments, a); 
-
+FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE * list){
     VALUE v;
     v.a = MALLOC(sizeof(struct N(Application)));
     v.a->t         = N(APPLICATION);
     v.a->nargs = c;
-    
-    VALUE * list = MALLOC(c*(sizeof(VALUE)));
-    list[0] = a; 
-    for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,VALUE);
-
-    va_end(arguments);
     v.a->arguments = list;
     return v;
 }
@@ -327,27 +305,13 @@ FUNCTIONALITY VALUE N(makeLet)(VALUE v,VALUE t,VALUE b){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE * t){
-    va_list arguments;
-    va_start(arguments, t); 
     VALUE val;
-
     val.lr        = MALLOC(sizeof(struct N(Letrec)));
     val.lr->t     = N(LETREC);
     val.lr->nargs = c;
     val.lr->body  = v;
-    val.lr->vars  = MALLOC(c * (sizeof(VALUE)));
-    val.lr->exprs = MALLOC(c * (sizeof(VALUE)));
-    val.lr->vars[0] = t; 
-
-    for(int i = 1; i < c; ++i ){
-        val.lr->vars[i] = va_arg(arguments,VALUE);
-    }
-
-    for(int i = 0; i < c; ++i ){
-        val.lr->exprs[i] = va_arg(arguments,VALUE);
-    }
-
-    va_end(arguments);
+    val.lr->vars  = t 
+    val.lr->exprs = (t+c);
     return val;
 }
 
@@ -401,21 +365,12 @@ FUNCTIONALITY VALUE N(makeNop)(void){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(makeBegin)(int c, VALUE * args){
-    va_list arguments;
-    va_start(arguments, args); 
-    VALUE v;
 
+    VALUE v;
     v.bg = MALLOC(sizeof(struct N(Begin)));
     v.bg->t         = N(BEGIN);
     v.bg->nargs = c;
-    VALUE * list = MALLOC(c*(sizeof(VALUE)));
-    list[0] = args;
-
-    for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,VALUE);
-
-    va_end(arguments);
-    v.bg->stmts = list;
+    v.bg->stmts = args;
     return v;
 }
 
@@ -457,22 +412,13 @@ FUNCTIONALITY VALUE N(makeCons)(VALUE v,VALUE v2){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(makeList)(int c,VALUE * args){
-    va_list arguments;
-    va_start(arguments, args); 
     VALUE v;
 
     v.ls         = MALLOC(sizeof(struct N(List)));
     v.ls->t      = N(LIST);
     v.ls->islist = 1;
     v.ls->nargs  = c;
-    VALUE * list = MALLOC(c*(sizeof(VALUE)));
-    list[0]      = args;
-
-    for(int i = 1; i < c; ++i )
-            list[i] = va_arg(arguments,VALUE);
-
-    va_end(arguments);
-    v.ls->args = list;
+    v.ls->args = args;
     return v;
 }
 

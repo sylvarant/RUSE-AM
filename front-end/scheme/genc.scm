@@ -105,7 +105,7 @@
     ; datums
     [(or (? integer?) (? boolean?) (? symbol?)) (c-singlemem exp in)]
 
-    [(and (? pair?) (not (? list?))) (string-append (prefix in 'List) "2\n"
+    [(and (? pair?) (not (? list?))) (string-append (prefix in 'List) "-1\n"
         (lexeme (car exp) in) "\n" (lexeme (cdr exp) in) )]
     
 

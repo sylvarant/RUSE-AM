@@ -227,7 +227,36 @@ FUNCTIONALITY VALUE readCode(char *** strbuf){
 
         MULTIPLE(APPLICATION,Application) 
         MULTIPLE(BEGIN,Begin) 
-        MULTIPLE(LIST,List) 
+
+        case N(LIST) : {
+            int c = -2;
+            if(sscanf((*strbuf)[0],"%d\n",&c) == 1){ 
+                switch(c){
+                    
+                    case -1 : {
+                        VALUE a = readCode(strbuf);
+                        VALUE b = readCode(strbuf);
+                        result = N(makePair)(a,b);
+                        break;
+                    }
+
+                    case 0 : {
+                        result = N(makeNIL)();
+                        break;
+                    }
+
+                    default : {
+                        VALUE * ls = calloc(c,sizeof(VALUE)); 
+                        for(int i = 0; i < c; i++){
+                            ls[i] = readCode(strbuf);
+                        }
+                        result = N(makeList)(c,ls);
+                    }
+
+                }
+            }
+            break; 
+        }
 
         case N(LETREC) : {
             int c = -1;    

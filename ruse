@@ -200,7 +200,6 @@ function compile
     make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
 
     # Make 
-    echo $warnopt
     make $platform -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt INPUTOPT=-D$byteopt  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 

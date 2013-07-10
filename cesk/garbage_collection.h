@@ -24,6 +24,6 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY void N(freeValue)(VALUE*);
+FUNCTIONALITY void N(freeValue)(VALUE);
 
 #endif

@@ -55,7 +55,7 @@ while ( my ($key, $value) = each(%langs)){
     # Language evaluation
     say "====================";
 
-    say " => \033[1;33m". $key ."\033[0m";
+    say " => \033[1;33m". uc($key) ."\033[0m";
     if ((scalar keys %problems) == 0) {
         $counter++;
         say "\033[1;33m". (scalar @input). " out of " . (scalar @input) . " succeeded\033[0m";

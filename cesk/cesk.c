@@ -13,9 +13,6 @@
  * =====================================================================================
  */
 
-#include <stdlib.h>
-#include <stdarg.h>
-
 #include "cesk.h"
 #include "string.h"
 
@@ -36,9 +33,7 @@ enum{NUM_ELEMS = 128};
  *  Local Functions
  *-----------------------------------------------------------------------------*/
 
-LOCAL VALUE steprec (void);
 LOCAL LIMBO step(void);
-LOCAL void inject(void);
 LOCAL LIMBO apply(VALUE proc,VALUE * args);
 LOCAL LIMBO applyKont(VALUE val,N(Kont) k);
 LOCAL VALUE evalAtom(VALUE atom);
@@ -89,7 +84,9 @@ LOCAL void debugState(){
     }
     DEBUG_PRINT("** CONTINUATION"); 
     VALUE cc = N(makeContinuation)(mystate->cont);
-    DEBUG_PRINT(" --> cont type %s",N(toString)(cc,0));
+    char * strc = N(toString)(cc,0);
+    DEBUG_PRINT(" --> cont type %s",strc);
+    free(strc);
 
     #ifdef SECURE
     DEBUG_PRINT("** FUNCTIONS"); 
@@ -353,7 +350,11 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
  */
 LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
-    DEBUG_PRINT("CALL PROCEDURE %s",N(toString)(proc,0));
+    #ifdef DEBUG
+    char * strd = N(toString)(proc,0);
+    DEBUG_PRINT("CALL PROCEDURE %s",strd);
+    free(strd);
+    #endif
 	if(proc.c->t == N(CLOSURE)){
 
         int curr = mystate->free_adr;
@@ -369,7 +370,11 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
 		// update storage with adresses pointing to arguments
         for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-            DEBUG_PRINT("Proc %d == %s",i,N(toString)((args[i]),0));
+            #ifdef DEBUG
+            char * strc = N(toString)((args[i]),0);
+            DEBUG_PRINT("Proc %d == %s",i,strc);
+            free(strc);
+            #endif
             mystate->storage[j] = (args[i]); // MEM : Don't clear
             i++;
         }
@@ -635,7 +640,7 @@ LOCAL LIMBO step()
  *  Description:    step through program step by step
  * =====================================================================================
  */
-LOCAL VALUE steprec (){
+FUNCTIONALITY VALUE N(steprec)(){
 
     #ifdef DEBUG
 
@@ -674,7 +679,7 @@ LOCAL VALUE steprec (){
  *  Description:    create a new start state
  * =====================================================================================
  */
-LOCAL void inject (){
+FUNCTIONALITY void N(inject)(){
 
     if(mystate != NULL) { free(mystate); }
 
@@ -760,7 +765,11 @@ ENTRYPOINT void * secure_eval(int label){
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
                 mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
-                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,N(toString)(mystate->storage[c],0));
+                #ifdef DEBUG
+                char * strc = N(toString)(mystate->storage[c],0);
+                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,strc);
+                free(strc);
+                #endif
                 return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
             }
 
@@ -772,6 +781,17 @@ ENTRYPOINT void * secure_eval(int label){
     }
 
     return NULL;
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    sload
+ *  Description:    setup the secure module -> todo high up
+ * =====================================================================================
+ */
+ENTRYPOINT void sload(char * strbuf){
+    N(inject)();
+    VALUE * ignore = N(readByteCode)(mystate,strbuf);
 }
 #endif
 
@@ -796,53 +816,5 @@ HOOK void * evaluate(void * v){
 	return ans.b;
 }
 
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    run
- *  Description:    run the program  // TODO add to top
- * =====================================================================================
- */
-LOCAL void run (void ** program,int c){
-
-    mystate->control.b = program[0];
-
-    for(int i = 0; i < c ; i++){
-        VALUE ans = steprec(); 
-        if(ans.tt != N(NOP)){
-            char * result = N(toString)(ans,1);
-            printf("%s\n",result);
-            free(result);
-        }
-        mystate->control.b = program[(i+1)%c]; 
-    }
-    free(program);
-    free(mystate->storage);
-    free(mystate);
-}
-
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:    main
- *  Description:    the startpoint
- *  Todo       :    implement conversion of arguments, preferably through file reads
- * =====================================================================================
- */
-int main(void){
-
-    #ifdef SANCUS_SPM
-    WDTCTL = WDTPW | WDTHOLD;
-    #endif
-
-    DEBUG_PRINT("Active"); 
-    inject();
-    run(getinput(),getinput_n());
-    return 0; 
-}
-
 #endif
-
-/*
-REPLACE */
 

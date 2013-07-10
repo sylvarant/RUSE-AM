@@ -14,7 +14,6 @@
  */
 
 #include "cesk.h" 
-#include <stdarg.h> // TODO lose dependency ?
 
 
 /*-----------------------------------------------------------------------------
@@ -173,7 +172,7 @@ FUNCTIONALITY VALUE N(makeIf)(VALUE a,VALUE b,VALUE c){
  *  Description:    create a λ VALUE with c variables 
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,...){
+FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,VALUE *ls){
 
     va_list arguments;
     va_start(arguments, body); 
@@ -200,7 +199,7 @@ FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,...){
  *  Description:    create a Primitive computation VALUE: (ex i_1 ... i_c)
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE arg,...){
+FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
 
     va_list arguments;
     va_start(arguments, arg); 
@@ -228,7 +227,7 @@ FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE arg,...){
  *  Description:    create a Application VALUE with c arguments
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE a,...){
+FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE * a){
     
     va_list arguments;
     va_start(arguments, a); 
@@ -327,7 +326,7 @@ FUNCTIONALITY VALUE N(makeLet)(VALUE v,VALUE t,VALUE b){
  *  Description:    create a Letrec VALUE
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE t,...){
+FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE * t){
     va_list arguments;
     va_start(arguments, t); 
     VALUE val;
@@ -401,7 +400,7 @@ FUNCTIONALITY VALUE N(makeNop)(void){
  *  Description:    create begin with c sub expressions
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeBegin)(int c, VALUE args,...){
+FUNCTIONALITY VALUE N(makeBegin)(int c, VALUE * args){
     va_list arguments;
     va_start(arguments, args); 
     VALUE v;
@@ -457,7 +456,7 @@ FUNCTIONALITY VALUE N(makeCons)(VALUE v,VALUE v2){
  *  Description:    create a list of c elements
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeList)(int c,VALUE args,...){
+FUNCTIONALITY VALUE N(makeList)(int c,VALUE * args){
     va_list arguments;
     va_start(arguments, args); 
     VALUE v;

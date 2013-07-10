@@ -16,8 +16,6 @@
 #include "string.h"
 #ifdef STRING_INCLUDED
 
-// TODO remove ?
-#include <stdarg.h>
 #include <string.h>
 
 

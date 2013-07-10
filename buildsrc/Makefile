@@ -3,15 +3,27 @@
 # By Adriaan Larmuseau                  #
 #########################################
 
+#============================================
+# Platform specific settings
+#============================================
+
+ifeq ($(uname_S),Darwin)
+	DEF_TARGET = darwin	
+endif
+
+ifeq ($(uname_S),Linux)
+	DEF_TARGET = linux
+endif
+
 
 #============================================
 # Tools
 #============================================
 
-MLD = gcc
+LD = gcc
 SLD = sancus-ld
 
-MCC = gcc
+CC = gcc
 SCC = sancus-cc
 
 SHELL := /bin/bash
@@ -20,7 +32,7 @@ SHELL := /bin/bash
 # Executable Targets
 #============================================
 
-MACEXEC= ../bin/exec
+EXEC= ../bin/ruse.$(LANG).$(BYTEOPT)
 SANEXEC = ../bin/exec.elf
 SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 
@@ -28,7 +40,7 @@ SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 # Flags
 #============================================
 
-CFLAGS = $(DEBOPT) $(CWARNFLAGS) -g
+CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g
 SANFLAGS = --verbose -DSPM
 MACFLAGS= -std=gnu99
 SANLDFLAGS = --rom-size 48K --ram-size 10K --verbose --standalone
@@ -39,7 +51,7 @@ KEY = deadbeefcafebabedeadbeefcafebabe
 #============================================
 
 # compile all c files in buildsrc
-SOURCE= $(shell find *.c) 
+SOURCE=binding.c cesk.c continuation.c garbage_collection.c label.c load.c main.c scheme.c string.c 
 
 # generate a set of insecure objects
 INSECURE= $(SOURCE:.c=.o)
@@ -54,16 +66,19 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 # Compiling objects
 #============================================
 
-%.o: %.c
-	$(MCC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
+%.o_I: %.bin
+	ld -r -b binary -o $@ $<
 
-%.san_o: %.c
+%.o: %.c
+	$(CC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
+
+%.san_o: %.c 
 	$(SCC) $(CFLAGS) $(SANFLAGS) -c -o $@ $<	
 
-%.o_S: %.c
-	$(MCC) $(CFLAGS) $(MACFLAGS) -DSECURE -c -o $@ $<	
+%.o_S: $(SOURCE)
+	$(CC) $(CFLAGS) $(MACFLAGS) -DSECURE -c -o $@ $<	
 
-%.san_o_S: %.c
+%.san_o_S: $(SOURCE)
 	$(SCC) $(CFLAGS) $(SANFLAGS) -DSECURE -c -o $@ $<	
 
 
@@ -71,10 +86,12 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 # Linking
 #============================================
 
-mac: $(INSECURE) $(SECURE)
-	$(MLD)  -o $(MACEXEC) $(SECURE) $(INSECURE) 
 
-$(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
+#todo parameterize inlinking
+darwin: $(INSECURE) $(SECURE)
+	$(LD) -o $(EXEC) $^
+
+$(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE) $(INPUT)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^
 
 sancus: $(SANEXEC_NO_HMAC) 
@@ -84,7 +101,7 @@ sancus: $(SANEXEC_NO_HMAC)
 # Results
 #============================================
 
-all: mac sancus
+all: $(DEF_TARGET) 
 
 
 #============================================
@@ -92,5 +109,5 @@ all: mac sancus
 #============================================
 
 clean:
-	$(RM) *.o* $(NAME) *~ *.c *.h *.clean
+	$(RM) *.o *.o_S *.c *.h *.parser
 

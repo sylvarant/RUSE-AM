@@ -1,86 +1,175 @@
 #!/usr/bin/env bash
 # Ruse front-end script
-
-#TODO at language detection
+# By Adriaan Larmuseau
 
 ############################
 # Script variables
 ############################
-options="slpdfwc"
+options="nslpdfwc"
 Usage="Usage : `basename $0` [-$options] sourcefile"
+slast="${@:(-2):1}"
+last=${!#}
 cscheme=racket
 IFS=""
 spms="" # ex : a.c,b.c
 fflag=0
 lflag=0
+bflag=0
+cflag=0
+pflag=0
+niflag=0
 debopt=""
 warnopt=-w
+byteopt="BYTE"
+langopt="ALL"
 platform=""
 front="./front-end"
 language=""
-scheme_ext="scm"
-ml_ext="ml"
+byte_1=""
+byte_2=""
+tmp_native_1="/tmp/input1.c"
+tmp_native_2="/tmp/input2.c"
+native_1="buildsrc/input1.c"
+native_2="buildsrc/input2.c"
+unamestr_os=`uname`
+base=""
+bytext=""
 
+
+############################
+# Function :: Capitalize
+# Captilaze a string
+############################
+function capitalize
+{
+    local ret=$(echo $1 | tr "[:lower:]" "[:upper:]")
+    echo $ret
+}
+
+
+############################
+# Function :: Log
+# Log debug output
+############################
+function log
+{
+
+    if [ $# -ne 4 ]; then
+        echo -e "Log needs 4 arguments"
+        exit 1
+    fi
+
+    #todo improve
+    local logname="test/$language/log/$(basename $1)_log" 
+
+    echo $2 > $logname 
+    echo >> $logname
+    echo "Platform :: $(capitalize $platform)" >> $logname
+    echo "Language :: $(capitalize $language)" >> $logname
+    echo "================= INSECURE INPUT =================" >> $logname
+    echo >> $logname
+    cat $3 >> $logname
+    echo >> $logname
+    echo "================= SECURE INPUT =================" >> $logname
+    echo >> $logname
+    cat $4 >> $logname
+}
+
+
+############################
+# Function :: Execute
+# run baby run
+############################
+function execute
+{
+    if [[ "$platform" == "sancus" ]]; then
+        sancus-sim ./bin/exec.elf
+    elif [[ $# -eq 2 ]]; then
+        ./bin/ruse.$langopt.$byteopt.$debopt $1 $2 2> /tmp/ruse_log
+    else
+        ./bin/ruse.$langopt.$byteopt.$debopt 2> /tmp/ruse_log
+    fi
+
+    #logging
+    if [[ $lflag -eq 1 ]]; then
+        local trace=$(</tmp/ruse_log) 
+        if [[ $# -eq 2 ]]; then
+            xxd -i $1 > $native_1
+            xxd -i $2 > $native_2
+        fi
+        log $last $trace $native_1 $native_2
+    fi
+    
+}
 
 ############################
 # Function :: Preprocess
 # Preprocess the buildsrc
 #   needs the source
 ############################
-preprocess()
+function preprocess
 { 
-    #clear buildsrc
-    rm buildsrc/*.c buildsrc/*.h buildsrc/*.o buildsrc/*.o_S 2>/dev/null
-
 
     #=====================================
     # Multi language support
     #=====================================
-    filename=$(basename "$1")
+    filename=$(basename "$1" 2> /dev/null) # || { niflag=1; return 0; }
     extension="${filename##*.}"
+    base="${filename%.*}"
 
     case "$extension" in
 
-        "$scheme_ext") 
+        "scm") 
             language="scheme"
-            $cscheme $front/scheme/genc.scm < $1 > buildsrc/input.c
+            bytext="byte_scm"
+            byte_1="/tmp/input1.byte_scm"
+            byte_2="/tmp/input2.byte_scm"
+            $cscheme $front/scheme/genc.scm < $1 > buildsrc/result.parser
+
+            #todo only when no file input
+            awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
             ;;
 
-        "$ml_ext") 
+        "ml") 
             language="ml"
+            bytext="byte_ml"
+            byte_1="/tmp/input1.byte_ml"
+            byte_2="/tmp/input2.byte_ml"
+            #TODO implement
             $front/ml/miniml $1 > buildsrc/input.c 2>/dev/null || { echo "Front-end failed, aborting ruse"; exit 1; }
             ;;
 
+        "byte_scm") 
+            language="scheme" 
+            bytext="byte_scm"
+            byte_1="/tmp/input1.byte_scm"
+            byte_2="/tmp/input2.byte_scm"
+            cp $1 $byte_1
+            cp $2 $byte_2
+            ;;
+
+        "byte_ml")
+            language="ml"
+            bytext="byte_ml"
+            byte_1="/tmp/input1.byte_ml"
+            byte_2="/tmp/input2.byte_ml"
+            cp $1 $byte_1
+            cp $2 $byte_2
+            ;;
+
+        *) niflag=1
+            ;;
+
     esac
-
-}
-
-############################
-# Function :: Load
-# Build the Load Function
-############################
-load()
-{
     
-    # copy all cesk to buildsrc - rewriting strategy ?
-    cp -p cesk/*.c buildsrc
-    cp -p cesk/*.h buildsrc
-
-
-    # replace a
-    grep -B 9999999 "REPLACE" buildsrc/cesk.c > temp.clean
-    if  cat temp.gen >> temp.clean 2>/dev/null ; then 
-        mv temp.clean buildsrc/cesk.c
-        # clean up
-        rm temp.gen 
-    fi
 }
+
 
 ############################
 # Function :: Fides
 # Fides generation - TODO
 ############################
-fides()
+function fides
 {
     (IFS=,
         for spm in $spms; do
@@ -95,34 +184,24 @@ fides()
 # Function :: Compile
 # Compile
 ############################
-compile()
+function compile
 {
 
-    preprocess $1
-    load
+    #clear buildsrc
+    make clean -s --directory=buildsrc 2>/dev/null
 
-    # Makefile time
-    make $platform -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt  || { echo "Compilation failed, aborting ruse"; exit 1; }
-}
+    # copy all cesk to buildsrc - rewriting strategy ?
+    cp -p $tmp_native_1 $native_1
+    cp -p $tmp_native_2 $native_2
+    cp -p cesk/*.c buildsrc
+    cp -p cesk/*.h buildsrc
 
+    # Make Ocaml front-end
+    make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
 
-############################
-# Function :: Log
-# Log debug output
-############################
-log()
-{
-    # Todo make more flexible
-    logname="test/$language/log/$(basename $1)_log" 
-    ./bin/exec 2> $logname 
-    echo >> $logname
-    echo "================= INSECURE INPUT =================" >> $logname
-    echo >> $logname
-    cat buildsrc/input.c >> $logname
-    echo >> $logname
-    echo "================= SECURE INPUT =================" >> $logname
-    echo >> $logname
-    sed '1,/REPLACE/d' buildsrc/cesk.c >> $logname
+    # Make 
+    echo $warnopt
+    make $platform -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt INPUTOPT=-D$byteopt  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 
 
@@ -131,7 +210,7 @@ log()
 #=====================================
 
 # we want at least one parameter (it may be a flag or an argument)
-if [ $# -eq 0 ]; then
+if [[ $# -eq 0 ]]; then
 	echo $Usage >&2
 	exit 1
 fi
@@ -146,24 +225,27 @@ while getopts "$options" OPTION
 do
 	case $OPTION in
 
-    # sancus as platform
-    s) platform="sancus"
+    # native add in code
+    n) bflag=1
         ;;
 
+    # sancus as platform
+    s)  if [[ "$unamestr_os" == 'Linux' ]]; then 
+            # TODO add extra checks
+            platform="sancus"
+            bflag=1
+        else
+            echo "Sancus only supported on Linux, aborting ruse"; 
+            exit 1; 
+        fi
+            ;;
+
     # compile
-    c)  compile ${!#}
-        exit 0
+    c)  cflag=1
         ;;
 
     # only parsing  
-    p)  preprocess ${!#}
-        cat buildsrc/input.c
-        echo ""
-        echo "============== Secure =================="
-        echo ""
-        load
-        tail buildsrc/cesk.c
-        exit 0
+    p)  pflag=1
         ;;
          
     # use fides
@@ -171,17 +253,17 @@ do
 		;;
 
     # debug version 
-    d) debopt=-DDEBUG 
+    d)  debopt=-DDEBUG 
+        
         ;;
 
     # generate warnings
-    w) wflag=1
-        warnopt="-Wall -Wextra"
+    w)  warnopt="-Wall -Wextra"
         ;;
 
 	# logging
 	l) debopt=-DDEBUG
-		lflag=1
+	   lflag=1
 		;;
 
 	?)	echo $Usage >&2
@@ -190,12 +272,41 @@ do
 	esac
 done
 
-compile ${!#}
+# generate byte code
+preprocess $last $slast
 
-# run baby run
-if [ $lflag -eq 1 ]; then
-   log ${!#} 
-else
-    ./bin/exec
+if [[ $pflag -eq 1 ]]; then
+
+    cp "$byte_1" "${base}.insec.$bytext"
+    cp "$byte_2" "${base}.sec.$bytext"
+
+    #finito
+    exit 0
 fi
 
+# do we need to load the bytecode into the binary ?
+if [[ $bflag -eq 1  ]]; then
+    if [[ $niflag -eq 1 ]];then
+        echo "Native requires a source file"
+        exit 1
+    fi
+    cflag=1
+    byteopt="NATIVE"
+    xxd -i "$byte_1" > $tmp_native_1
+    xxd -i $byte_2 > $tmp_native_2
+fi
+
+
+# do we need to compile ?
+if [[ $cflag -eq 1 ]]; then
+    compile
+fi
+
+# run baby run
+if [[ $niflag -ne 1 ]]; then
+    if [[ $bflag -eq 1 ]]; then
+        execute
+    elif
+        execute $byte_1 $byte_2
+    fi
+fi

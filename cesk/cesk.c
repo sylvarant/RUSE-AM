@@ -794,6 +794,10 @@ ENTRYPOINT void * secure_eval(int label){
     return NULL;
 }
 
+#ifndef BYTE
+HOOK char N(input_byte)[];
+#endif
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    sload
@@ -803,7 +807,11 @@ ENTRYPOINT void * secure_eval(int label){
 ENTRYPOINT void sload(char * strbuf){
     N(inject)();
     int l = 0;
+    #ifdef BYTE
     VALUE * code = N(readByteCode)(strbuf,&l);
+    #else
+    VALUE * code = N(readByteCode)(N(input_byte),&l);
+    #endif
     for(int i = 0; i < l; i++){
         DEBUG_PRINT("Adding Label :: %d",mystate->free_adr);
         mystate->storage[mystate->free_adr] = code[i];

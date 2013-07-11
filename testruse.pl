@@ -2,12 +2,16 @@
 
 use 5.010;
 use strict;
+use Getopt::Long;
 
 
 # Multi Language support
 my %langs = ("scheme",".scm","ml",".ml");
 my $counter = 0;
+my $native;
 
+#test native
+GetOptions('native' => \$native);
 
 #################################
 # Function :: getresult
@@ -43,8 +47,15 @@ while ( my ($key, $value) = each(%langs)){
 
     foreach (@input){
         my $file = $_;
-        #say "./ruse -l test/$key/byte/$file.insec.byte_$ext  test/$key/byte/$file.sec.byte_$ext";
-        my $ex = `./ruse -l test/$key/byte/$file.insec.byte_$ext  test/$key/byte/$file.sec.byte_$ext`;
+
+        # store result of ruse run in ex
+        my $ex;
+
+        if($native){
+            $ex = `./ruse -n test/$key/$file.$ext`;
+        }else {
+            $ex = `./ruse -l test/$key/byte/$file.insec.byte_$ext  test/$key/byte/$file.sec.byte_$ext`;
+        }
         chomp($ex);
 
 		my $solution = $file.".out";

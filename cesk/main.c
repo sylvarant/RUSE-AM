@@ -96,9 +96,6 @@ int main(int argc,const char ** argv){
 
 #else
 
-extern unsigned char _tmp_input2_byte_scm[];
-extern unsigned char _tmp_input1_byte_scm[];
-
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    main
@@ -112,10 +109,11 @@ int main(void){
     WDTCTL = WDTPW | WDTHOLD;
     #endif
 
-    sload(_tmp_input2_byte_scm);
+	// sload has its secret code built in
+    sload(NULL);
 
     int lines =0;
-    VALUE * cmds = N(readByteCode)(_tmp_input1_byte_scm,&lines);
+    VALUE * cmds = N(readByteCode)(N(input_byte),&lines);
     inject();
     run(cmds,lines);
     return 0; 

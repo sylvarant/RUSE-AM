@@ -98,15 +98,15 @@ function execute
     elif [[ $# -eq 2 ]]; then
         ./bin/ruse.$langopt.${byteopt}${debex} $1 $2 2> /tmp/ruse_log
     else
-        ./bin/ruse.$langopt.$byteopt.$debopt 2> /tmp/ruse_log
+        ./bin/ruse.$langopt.$byteopt${debex} 2> /tmp/ruse_log
     fi
 
     #logging
     if [[ $lflag -eq 1 ]]; then
         local trace=$(</tmp/ruse_log) 
         if [[ $# -eq 2 ]]; then
-            xxd -i $1 > $native_1
-            xxd -i $2 > $native_2
+            ./tools/bytetoc.pl  $1 > $native_1
+            ./tools/bytetoc.pl --secure $2 > $native_2
         fi
         log $last $trace $native_1 $native_2 $byte_1 $byte_2
 	else
@@ -307,8 +307,8 @@ if [[ $bflag -eq 1  ]]; then
     fi
     cflag=1
     byteopt=NATIVE
-    xxd -i "$byte_1" > $tmp_native_1
-    xxd -i $byte_2 > $tmp_native_2
+    ./tools/bytetoc.pl  "$byte_1" > $tmp_native_1
+    ./tools/bytetoc.pl --secure $byte_2 > $tmp_native_2
 fi
 
 

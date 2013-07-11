@@ -28,7 +28,6 @@ FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,unsigned int);
  *-----------------------------------------------------------------------------*/
 
 LOCAL unsigned int nchar(int v);
-LOCAL char * generateString (char * start,int c,VALUE v,...);
 LOCAL char * generateseqString (char * start,int c,VALUE * ls,char * del);
 
 
@@ -65,55 +64,10 @@ LOCAL unsigned int nchar(int v){
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:    generateString
- *  Description:    Converts a VALUE with c number of subvalues into a string 
- *                  The type of VALUE is given in the start argument
- * =====================================================================================
- */
-LOCAL char * generateString (char * start,int c,VALUE v,...){
-
-    va_list arguments;
-    va_start(arguments, v); 
-
-    int sstart = strlen(start);
-    char ** list = MALLOC(c*(sizeof(char *)));
-    list[0] = N(toString)(v,0);
-    sstart   += strlen(list[0]);
-
-    for(int i = 1; i < c; ++i ){
-        list[i]   = N(toString)(va_arg(arguments,VALUE),0);
-        sstart   += strlen(list[i]);
-    }
-
-    char * str = MALLOC(sizeof(char) * (sstart+(c-1)+2));
-    str[0] ='\0';
-    strcat(str,start);
-
-    for(int i = 0; i <c ; ++i){
-        strcat(str,list[i]);     
-        if(i == c-1) {}
-        else{ strcat(str,",");}
-    }
-
-    strcat(str,")");
-
-    for(int i = 0; i < c ; i++){
-        free(list[i]);
-    }
-
-    free(list);
-    va_end(arguments);
-    return str;
-}
-
-
-/* 
- * ===  FUNCTION  ======================================================================
  *         Name:    generateseqString
  *  Description:    Converts a VALUE with c number of subvalues into a string 
  *                  The type of VALUE is given in the start argument
  *                  ! The difference with generatestring is that this one does not use 
- *                      VA_ARGS :: TODO merge both functions ?
  * =====================================================================================
  */
 LOCAL char * generateseqString(char * start,int c,VALUE * ls,char * del){
@@ -275,11 +229,23 @@ FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
         case N(APPLICATION) : 
             return generateseqString("(-> ",par.a->nargs,par.a->arguments," ");
 
-        case N(IF) : 
-            return generateString("(if ",3,par.f->cond,par.f->cons,par.f->alt);
+        case N(IF) : { 
+			VALUE * ls = MALLOC(3 * sizeof(VALUE));
+			ls[0] = par.f->cond;
+			ls[1] = par.f->cons;
+			ls[2] = par.f->alt;
+            char * str = generateseqString("(if ",3,ls,",");
+            free(ls);
+            return str;
+        }
 
-        case N(CLOSURE) : 
-            return generateString("#clo(",1,par.c->lambda);
+        case N(CLOSURE) : {
+			VALUE * ls = MALLOC(1 * sizeof(VALUE));
+			ls[0] = par.c->lambda;
+            char * str = generateseqString("#clo(",1,ls,",");
+            free(ls);
+            return str;
+        }
     
         case N(CONTINUATION) : {
             char * str = (char *) MALLOC(5 * sizeof(char));
@@ -308,14 +274,32 @@ FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
             return str;
         }
     
-        case N(CALLCC) : 
-            return generateString("(call/cc ",1,par.cc->function);
+        case N(CALLCC) : {
+			VALUE * ls = MALLOC(1 * sizeof(VALUE));
+			ls[0] = par.cc->function;
+            char * str = generateseqString("(call/cc ",1,ls,",");
+            free(ls);
+            return str;
+        }
     
-        case N(SET) : 
-            return generateString("(set ",2,par.sv->var,par.sv->value);
+        case N(SET) : {
+			VALUE * ls = MALLOC(2 * sizeof(VALUE));
+			ls[0] = par.sv->var;
+			ls[1] = par.sv->value;
+            char * str = generateseqString("(set ",2,ls,",");
+            free(ls);
+            return str;
+        }
     
-        case N(LET) :
-            return generateString("(let ",3,par.lt->var,par.lt->expr,par.lt->body);
+        case N(LET) : {
+			VALUE * ls = MALLOC(3 * sizeof(VALUE));
+			ls[0] = par.lt->var;
+			ls[1] = par.lt->expr;
+			ls[2] = par.lt->body;
+            char * str = generateseqString("(let ",3,ls,",");
+            free(ls);
+            return str;
+        }
     
         case N(LETREC) : {
             char * start = "letrec([";
@@ -365,33 +349,75 @@ FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
         case N(BEGIN) :
             return generateseqString("(begin ",par.bg->nargs,par.bg->stmts," ");
     
-        case N(CAR) :
-            return generateString("(car ",1,par.car->arg);
+        case N(CAR) : {
+			VALUE * ls = MALLOC(1 * sizeof(VALUE));
+			ls[0] = par.car->arg;
+            char * str = generateseqString("(car ",1,ls,",");
+            free(ls);
+            return str;
+        }
     
-        case N(CDR) :
-            return generateString("(cdr ",1,par.cdr->arg);
+        case N(CDR) : {
+			VALUE * ls = MALLOC(1 * sizeof(VALUE));
+			ls[0] = par.cdr->arg;
+            char * str = generateseqString("(cdr ",1,ls,",");
+            free(ls);
+            return str;
+        }
     
-        case N(CONS) :
-            return generateString("(cons ",2,par.cons->arg,par.cons->arg2);
+        case N(CONS) : {
+			VALUE * ls = MALLOC(2 * sizeof(VALUE));
+			ls[0] = par.cons->arg;
+			ls[1] = par.cons->arg2;
+            char * str = generateseqString("(cons ",2,ls,",");
+            free(ls);
+            return str;
+        }
     
         case N(LIST) : 
             if(par.ls->islist)  return generateseqString((outer ? "'(" : "("),par.ls->nargs,par.ls->args," ");
             return generateseqString((outer ? "'(" : "("),par.ls->nargs,par.ls->args," . ");
     
-        case N(QUOTE) :
-            return generateString("(quote ",1,par.q->arg);
+        case N(QUOTE) : {
+			VALUE * ls = MALLOC(1 * sizeof(VALUE));
+			ls[0] = par.q->arg;
+            char * str = generateseqString("(quote ",1,ls,",");
+            free(ls);
+            return str;
+        }
    
-        case N(PAIRQ) :
-            return generateString("(pair? ",1,par.pq->arg);
+        case N(PAIRQ) : {
+            VALUE * ls = MALLOC(1* sizeof(VALUE));
+            ls[0] = par.pq->arg;
+            char * str =generateseqString("(pair? ",1,ls,",");
+            free(ls);
+            return str;
+        }
     
-        case N(LISTQ) :
-            return generateString("(list? ",1,par.lq->arg);
+        case N(LISTQ) : {
+            VALUE * ls = MALLOC(1 * sizeof(VALUE));
+            ls[0] = par.lq->arg;
+            char * str = generateseqString("(list? ",1,ls,",");
+            free(ls);
+            return str;
+        }
 
-        case N(NULLQ) :
-            return generateString("(null? ",1,par.nq->arg);
+        case N(NULLQ) : {
+            VALUE * ls = MALLOC(1 * sizeof(VALUE));
+            ls[0] = par.lq->arg;
+            char * str = generateseqString("(null? ",1,ls,",");
+            free(ls);
+            return str;
+       } 
 
-        case N(DEFINE) :
-            return generateString("(define ",2,par.d->var,par.d->expr);
+        case N(DEFINE) : {
+            VALUE * ls = MALLOC(2 * sizeof(VALUE));
+            ls[0] = par.d->var;
+            ls[1] = par.d->expr;
+            char * str = generateseqString("(define ",2,ls,",");
+            free(ls);
+            return str;
+        }
 
         default :
             DEBUG_PRINT("Could not convert Value to string!!!"); 

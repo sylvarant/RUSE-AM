@@ -14,6 +14,7 @@
  */
 
 #include "cesk.h"
+#include "load.h"
 #include "string.h"
 
 /*-----------------------------------------------------------------------------
@@ -243,7 +244,12 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
                 insertLabel(&(mystate->label),mystate->free_adr);
                 DEBUG_PRINT("Adding Label (A) == %d",c);
                 mystate->free_adr++;
-                return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ptr,makeIS(c))),N(makeSymbol)("a")));
+                OTHERVALUE * ls = MALLOC(2 * sizeof(OTHERVALUE));
+                ls[0] = ptr;
+                ls[1] = makeIS(c);
+                VALUE * la = MALLOC(1 * sizeof(VALUE));
+                la[0] = N(makeSymbol)("a");
+                return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ls)),la));
             }
 
             default : break;
@@ -665,7 +671,7 @@ FUNCTIONALITY VALUE N(steprec)(){
     #endif
 
     if(result.empty == NULL){
-        return steprec();
+        return N(steprec)();
     }
     else{
         return result.answer;
@@ -714,7 +720,7 @@ ENTRYPOINT void * secure_eval(int label){
         mystate->cont = N(makeKRet)(mystate->cont);
         
         // compute
-        VALUE in = steprec();
+        VALUE in = N(steprec)();
 
         // No Heap
         switch(in.tt){
@@ -764,13 +770,18 @@ ENTRYPOINT void * secure_eval(int label){
                 int c = mystate->free_adr;
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
-                mystate->storage[c] = N(makeApplication)(2,in,makeSI(OTHERN(makeSymbol)("z")));
+                VALUE * ls = MALLOC(2 * sizeof(VALUE));
+                ls[0] = in;
+                ls[1] = makeSI(OTHERN(makeSymbol)("z"));
+                mystate->storage[c] = N(makeApplication)(2,ls);
                 #ifdef DEBUG
                 char * strc = N(toString)(mystate->storage[c],0);
                 DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,strc);
                 free(strc);
                 #endif
-                return (OTHERN(makeLambda)(1,makeIS(c),OTHERN(makeSymbol)("z"))).b; 
+                OTHERVALUE * la = MALLOC(1 * sizeof(OTHERVALUE));
+                la[0] = OTHERN(makeSymbol)("z");
+                return (OTHERN(makeLambda)(1,makeIS(c),la)).b; 
             }
 
             default : break;
@@ -791,7 +802,14 @@ ENTRYPOINT void * secure_eval(int label){
  */
 ENTRYPOINT void sload(char * strbuf){
     N(inject)();
-    VALUE * ignore = N(readByteCode)(mystate,strbuf);
+    int l = 0;
+    VALUE * code = N(readByteCode)(strbuf,&l);
+    for(int i = 0; i < l; i++){
+        DEBUG_PRINT("Adding Label :: %d",mystate->free_adr);
+        mystate->storage[mystate->free_adr] = code[i];
+        insertLabel(&(mystate->label),mystate->free_adr);
+        mystate->free_adr++;
+    }
 }
 #endif
 
@@ -812,7 +830,7 @@ HOOK void * evaluate(void * v){
     mystate->control.b = v;
 
     // compute
-    VALUE ans  = steprec();
+    VALUE ans  = N(steprec)();
 	return ans.b;
 }
 
@@ -828,7 +846,7 @@ HOOK void run (VALUE * program,int c){
     mystate->control = program[0];
 
     for(int i = 0; i < c ; i++){
-        VALUE ans = steprec(); 
+        VALUE ans = N(steprec)(); 
         if(ans.tt != N(NOP)){
             char * result = N(toString)(ans,1);
             printf("%s\n",result);

@@ -9,7 +9,6 @@
 (define outside #f)
 (define xnr 0)
 (define xxpr '())
-(define outl '())
 
 
 ;; Normal functions
@@ -204,7 +203,7 @@
                 (set! outside #t)) 
                 (let ((c xnr))
                 (set! xnr (+ xnr 1))
-                (set! outl  (cons (c-gener arg #t) outl)) 
+                (set! xxpr  (cons (c-gener arg #t) xxpr)) 
                 (string-append (prefix in 'IS) (number->string c))))] ;(error "Cannot cross to Secure from InSecure") )]
 
     ; function appl
@@ -225,11 +224,6 @@
 ))
 
 
-;; build the secure
-(define (buildr expr c) (match expr
-    ['() '()]
-    [else (cons (string-append "DEBUG_PRINT(\"%d\",mystate->free_adr); mystate->storage[mystate->free_adr] = "(car expr) ";\n insertLabel(&(mystate->label),mystate->free_adr);\n mystate->free_adr++;\n") (buildr (cdr expr) (+ 1 c)))]))
-
 
 ;; create-result :: the fineal result
 (define (create-result emit expr)
@@ -243,15 +237,15 @@
     (emit "0") ; Language
     (emit (number->string (length xxpr)))
     (when (> (length xxpr) 0)
-        (emit (string-join (buildr (reverse xxpr) 0)  "\n")))
+        (emit (string-join (reverse xxpr)  "\n")))
 )
 
 
 ;; Emit
 (define (emit line)
-
   (display line)
-  (newline))
+  (newline)
+)
 
 
 ; Atomic should not be normalized !!

@@ -32,7 +32,7 @@ SHELL := /bin/bash
 # Executable Targets
 #============================================
 
-EXEC= ../bin/ruse.$(LANG).$(BYTEOPT)
+EXEC= ../bin/ruse$(subst -D,.,$(LANG))$(subst -D,.,$(BYTEOPT))$(subst -D,.,$(DEBOPT))
 SANEXEC = ../bin/exec.elf
 SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 
@@ -51,14 +51,14 @@ KEY = deadbeefcafebabedeadbeefcafebabe
 #============================================
 
 # compile all c files in buildsrc
-SOURCE=binding.c cesk.c continuation.c garbage_collection.c label.c load.c main.c scheme.c string.c 
+SOURCE=$(wildcard *.c)
 
 # generate a set of insecure objects
 INSECURE= $(SOURCE:.c=.o)
 SANINSECURE= $(SOURCE:.c=.san_o)
 
 # generate a set of secure objects
-SECURE= $(INSECURE:.o=.o_S)
+SECURE= $(SOURCE:.c=.o_S)
 SANSECURE= $(SOURCE:.c=.san_o_S)
 
 
@@ -66,19 +66,16 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 # Compiling objects
 #============================================
 
-%.o_I: %.bin
-	ld -r -b binary -o $@ $<
-
 %.o: %.c
 	$(CC) $(CFLAGS) $(MACFLAGS) -c -o $@ $<	
 
 %.san_o: %.c 
 	$(SCC) $(CFLAGS) $(SANFLAGS) -c -o $@ $<	
 
-%.o_S: $(SOURCE)
+%.o_S: %.c
 	$(CC) $(CFLAGS) $(MACFLAGS) -DSECURE -c -o $@ $<	
 
-%.san_o_S: $(SOURCE)
+%.san_o_S: %.c
 	$(SCC) $(CFLAGS) $(SANFLAGS) -DSECURE -c -o $@ $<	
 
 
@@ -91,7 +88,7 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 darwin: $(INSECURE) $(SECURE)
 	$(LD) -o $(EXEC) $^
 
-$(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE) $(INPUT)
+$(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^
 
 sancus: $(SANEXEC_NO_HMAC) 

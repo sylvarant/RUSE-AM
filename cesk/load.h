@@ -22,7 +22,7 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY VALUE OTHERN(readCode)(char***);
-FUNCTIONALITY VALUE * N(readByteCode) (STATE*,char*,int *);
+FUNCTIONALITY VALUE N(readCode)(char***);
+FUNCTIONALITY VALUE * N(readByteCode) (char*,int *);
 
 #endif

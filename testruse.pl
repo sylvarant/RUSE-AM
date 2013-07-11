@@ -32,23 +32,27 @@ say "Testing ...";
 # New test series for each language
 while ( my ($key, $value) = each(%langs)){
     
+	(my $ext = $value)=~ s/^\.//; 
+
     # input files
     my @input = `ls test/$key/ | egrep "$value"`;
+	@input= map {$_ =~ s/\.[^.]+$//; $_} @input;
 
     #results
     my %problems = ();
 
     foreach (@input){
         my $file = $_;
-        my $ex = `./ruse -l test/$key/$file`;
+        #say "./ruse -l test/$key/byte/$file.insec.byte_$ext  test/$key/byte/$file.sec.byte_$ext";
+        my $ex = `./ruse -l test/$key/byte/$file.insec.byte_$ext  test/$key/byte/$file.sec.byte_$ext`;
         chomp($ex);
 
-        (my $solution = $file) =~ s/$value$/\.out/;
+		my $solution = $file.".out";
         my $an =  &getresult("./test/$key/".$solution); 
 
         # Test evaluation
         unless ($an ~~ $ex){
-            $problems{$file} = "\033[1;31mFAIL\033[0m : ". $ex;
+            $problems{$file.$value} = "\033[1;31mFAIL\033[0m : ". $ex;
         }
     }
 

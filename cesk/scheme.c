@@ -174,21 +174,12 @@ FUNCTIONALITY VALUE N(makeIf)(VALUE a,VALUE b,VALUE c){
  */
 FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,VALUE *ls){
 
-    va_list arguments;
-    va_start(arguments, body); 
     VALUE v;
-
     v.l = MALLOC(sizeof(struct N(Lambda)));
     v.l->t = N(LAM);
     v.l->nargs = c;
     v.l->body  = body;
-    VALUE * list =  MALLOC(c * (sizeof(VALUE)));
-
-    for(int i = 0; i < c; ++i )
-            list[i] = va_arg(arguments,VALUE);
-    
-    va_end(arguments);
-    v.l->arguments = list;
+    v.l->arguments = ls;
     return v;
 }
 
@@ -310,7 +301,7 @@ FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE * t){
     val.lr->t     = N(LETREC);
     val.lr->nargs = c;
     val.lr->body  = v;
-    val.lr->vars  = t 
+    val.lr->vars  = t;
     val.lr->exprs = (t+c);
     return val;
 }
@@ -445,7 +436,10 @@ FUNCTIONALITY VALUE N(makeNIL)(void){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(makePair)(VALUE v,VALUE v2){
-    VALUE ret      = N(makeList)(2,v,v2);
+	VALUE * ls = MALLOC(2 * sizeof(VALUE));
+	ls[0]          = v;
+	ls[1]          = v2;
+    VALUE ret      = N(makeList)(2,ls);
     ret.ls->islist = 0;
     return ret;
 }

@@ -54,7 +54,7 @@ function capitalize
 function log
 {
 
-    if [ $# -ne 4 ]; then
+    if [ $# -ne 6 ]; then
         echo -e "Log needs 4 arguments"
         exit 1
     fi
@@ -62,15 +62,25 @@ function log
     #todo improve
     local logname="test/$language/log/$(basename $1)_log" 
 
-    echo $2 > $logname 
-    echo >> $logname
+    echo > $logname
     echo "Platform :: $(capitalize $platform)" >> $logname
     echo "Language :: $(capitalize $language)" >> $logname
+    echo >> $logname
+    echo $2 >> $logname 
+    echo >> $logname
     echo "================= INSECURE INPUT =================" >> $logname
+    echo >> $logname
+	cat $5 >> $logname
+    echo >> $logname
+    echo "================= SECURE INPUT =================" >> $logname
+    echo >> $logname
+    cat $6 >> $logname
+    echo >> $logname
+    echo "================= INSECURE INPUT:: C =================" >> $logname
     echo >> $logname
     cat $3 >> $logname
     echo >> $logname
-    echo "================= SECURE INPUT =================" >> $logname
+    echo "================= SECURE INPUT:: C =================" >> $logname
     echo >> $logname
     cat $4 >> $logname
 }
@@ -82,10 +92,11 @@ function log
 ############################
 function execute
 {
+	debex=${debopt/-D/.} 
     if [[ "$platform" == "sancus" ]]; then
         sancus-sim ./bin/exec.elf
     elif [[ $# -eq 2 ]]; then
-        ./bin/ruse.$langopt.$byteopt.$debopt $1 $2 2> /tmp/ruse_log
+        ./bin/ruse.$langopt.${byteopt}${debex} $1 $2 2> /tmp/ruse_log
     else
         ./bin/ruse.$langopt.$byteopt.$debopt 2> /tmp/ruse_log
     fi
@@ -97,7 +108,9 @@ function execute
             xxd -i $1 > $native_1
             xxd -i $2 > $native_2
         fi
-        log $last $trace $native_1 $native_2
+        log $last $trace $native_1 $native_2 $byte_1 $byte_2
+	else
+		cat /tmp/ruse_log
     fi
     
 }
@@ -131,6 +144,7 @@ function preprocess
             ;;
 
         "ml") 
+			exit 1;
             language="ml"
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
@@ -144,17 +158,18 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
-            cp $1 $byte_1
-            cp $2 $byte_2
+            cp $2 $byte_1
+            cp $1 $byte_2
             ;;
 
         "byte_ml")
+			exit 1;
             language="ml"
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            cp $1 $byte_1
-            cp $2 $byte_2
+            cp $2 $byte_1
+            cp $1 $byte_2
             ;;
 
         *) niflag=1
@@ -191,8 +206,10 @@ function compile
     make clean -s --directory=buildsrc 2>/dev/null
 
     # copy all cesk to buildsrc - rewriting strategy ?
-    cp -p $tmp_native_1 $native_1
-    cp -p $tmp_native_2 $native_2
+    if [[ $bflag -eq 1 ]]; then
+        cp -p $tmp_native_1 $native_1
+        cp -p $tmp_native_2 $native_2
+    fi
     cp -p cesk/*.c buildsrc
     cp -p cesk/*.h buildsrc
 
@@ -200,7 +217,7 @@ function compile
     make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
 
     # Make 
-    make $platform -s --directory=buildsrc DEBOPT=$debopt CWARNFLAGS=$warnopt INPUTOPT=-D$byteopt  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
+    make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 
 
@@ -253,7 +270,6 @@ do
 
     # debug version 
     d)  debopt=-DDEBUG 
-        
         ;;
 
     # generate warnings
@@ -290,10 +306,11 @@ if [[ $bflag -eq 1  ]]; then
         exit 1
     fi
     cflag=1
-    byteopt="NATIVE"
+    byteopt=NATIVE
     xxd -i "$byte_1" > $tmp_native_1
     xxd -i $byte_2 > $tmp_native_2
 fi
+
 
 
 # do we need to compile ?
@@ -305,7 +322,8 @@ fi
 if [[ $niflag -ne 1 ]]; then
     if [[ $bflag -eq 1 ]]; then
         execute
-    elif
+    else
         execute $byte_1 $byte_2
     fi
 fi
+

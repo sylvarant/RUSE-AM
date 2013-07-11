@@ -9,6 +9,7 @@
 (define outside #f)
 (define xnr 0)
 (define xxpr '())
+(define outl '())
 
 
 ;; Normal functions
@@ -203,7 +204,7 @@
                 (set! outside #t)) 
                 (let ((c xnr))
                 (set! xnr (+ xnr 1))
-                (set! xxpr  (cons (c-gener arg #t) xxpr)) 
+                (set! outl  (cons (c-gener arg #t) outl)) 
                 (string-append (prefix in 'IS) (number->string c))))] ;(error "Cannot cross to Secure from InSecure") )]
 
     ; function appl
@@ -220,9 +221,12 @@
 ;; build the program
 (define (buildi expr in) (match expr
     ['() '()]
-    [else  (cons (c-gener (car expr) in) (buildi (cdr expr) in))]
+    [else   (begin
+        (define head (c-gener (car expr) in))   
+        (set! xxpr (append (reverse outl) xxpr))
+        (define tail (buildi (cdr expr) in))
+        (cons head tail))]
 ))
-
 
 
 ;; create-result :: the fineal result

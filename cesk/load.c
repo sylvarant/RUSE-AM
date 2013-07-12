@@ -41,7 +41,7 @@
             int c = -1;\
             if(sscanf((*strbuf)[0], "%d",&c) == 1){\
                 (*strbuf)++;\
-                VALUE * ls = calloc(c,sizeof(VALUE));\
+                VALUE * ls = MALLOC(c * sizeof(VALUE));\
                 for(int i = 0; i < c; i++){\
                     ls[i] = N(readCode)(strbuf);\
                 }\
@@ -167,7 +167,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
             int c = -1;    
             if(sscanf((*strbuf)[0], "%d",&c) == 1){ 
                 (*strbuf)++;
-                char * temp = calloc(c+1,sizeof(char));    
+                char * temp = MALLOC((c+1) * sizeof(char));    
                 if(sscanf((*strbuf)[0], "%s",temp) == 1){ 
                     (*strbuf)++;
 					result = N(makeSymbol)(temp);
@@ -214,7 +214,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
             int c = -1;    
             if(sscanf((*strbuf)[0], "%d",&c) == 1){ 
                 (*strbuf)++;
-                VALUE * ls = calloc(c,sizeof(VALUE)); 
+                VALUE * ls = MALLOC(c * sizeof(VALUE)); 
                 VALUE body = N(readCode)(strbuf);
                 for(int i = 0; i < c; i++){
                     ls[i] = N(readCode)(strbuf);
@@ -249,7 +249,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                     }
 
                     default : {
-                        VALUE * ls = calloc(c,sizeof(VALUE)); 
+                        VALUE * ls = MALLOC(c * sizeof(VALUE)); 
                         for(int i = 0; i < c; i++){
                             ls[i] = N(readCode)(strbuf);
                         }
@@ -265,7 +265,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
             int c = -1;    
             if(sscanf((*strbuf)[0],"%d",&c) == 1){ 
                 (*strbuf)++;
-                VALUE * ls = calloc(2*c,sizeof(VALUE)); 
+                VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
                 VALUE body = N(readCode)(strbuf);
                 for(int i = 0; i < 2*c; i++){
                     ls[i] = N(readCode)(strbuf);
@@ -299,7 +299,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
                 }
-                VALUE * ls = calloc(c,sizeof(VALUE)); 
+                VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
                 for(int i = 0; i < c; i++){
                     ls[i] = N(readCode)(strbuf);
                 }
@@ -372,7 +372,7 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 
 		    DEBUG_PRINT("Scheme Program -- Expecting %d lines",*line_n);
 
-		    VALUE * locations = calloc(*line_n,sizeof(VALUE));     
+		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
             list +=2;
 		    for(int i = 0; i < *line_n ; i++){
 			    locations[i] = N(readCode)(&list);

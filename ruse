@@ -10,6 +10,7 @@ Usage="Usage : `basename $0` [-$options] sourcefile"
 slast="${@:(-2):1}"
 last=${!#}
 cscheme=racket
+cml=ocaml
 IFS=""
 spms="" # ex : a.c,b.c
 fflag=0
@@ -230,6 +231,9 @@ if [[ $# -eq 0 ]]; then
 	echo $Usage >&2
 	exit 1
 fi
+
+# find ocaml
+type $cml >/dev/null 2>&1 || { echo -e >&2 "ERROR :: $cml must be add to the PATH of the current shell"; exit 1; }
 
 # find racket
 type $cscheme >/dev/null 2>&1 || { echo -e >&2 

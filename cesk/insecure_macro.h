@@ -31,13 +31,7 @@
 
 // Entry point is sacred
 #ifdef SANCUS_SPM
-    #include <sancus/sm_support.h>
-    #define __MSP430_INTRINSICS_H_
-    #include <msp430.h>
-
-    #define SPM_NAME "Spm"
     #define ENTRYPOINT SM_ENTRY(SPM_NAME) extern
-
 #else
 
 #define ENTRYPOINT extern

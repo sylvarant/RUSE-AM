@@ -109,6 +109,8 @@ int main(void){
     WDTCTL = WDTPW | WDTHOLD;
     #endif
 
+    printf("started\n");
+
 	// sload has its secret code built in
     sload(NULL);
 

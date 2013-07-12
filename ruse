@@ -95,7 +95,7 @@ function execute
 {
 	debex=${debopt/-D/.} 
     if [[ "$platform" == "sancus" ]]; then
-        sancus-sim ./bin/exec.elf
+        sancus-sim ./bin/exec.elf 2> /tmp/ruse_log
     elif [[ $# -eq 2 ]]; then
         ./bin/ruse.$langopt.${byteopt}${debex} $1 $2 2> /tmp/ruse_log
     else

@@ -41,7 +41,7 @@ SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 #============================================
 
 CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g
-SANFLAGS = --verbose  -DSANCUS_SPM
+SANFLAGS = --debug -DSANCUS_SPM
 MACFLAGS= -std=gnu99
 SANLDFLAGS = --rom-size 48K --ram-size 10K --verbose --standalone 
 KEY = deadbeefcafebabedeadbeefcafebabe

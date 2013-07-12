@@ -27,26 +27,29 @@
  * Macro's 
  *-----------------------------------------------------------------------------*/
 #define SINGLE(T,TYPE)     case N(T) : {\
-            VALUE c = N(readCode)(strbuf);\
-			result = N(make##TYPE)(c);\
+            VALUE c;\
+            c.b = N(readCode)(strbuf);\
+			result = N(make##TYPE)(c.b);\
             break;\
         }
 
 #define DOUBLE(T,TYPE)  case N(T) : {\
-            VALUE a = N(readCode)(strbuf);\
-            VALUE b = N(readCode)(strbuf);\
-			result = N(make##TYPE)(a,b);\
+            VALUE a;\
+            VALUE b;\
+            a.b = N(readCode)(strbuf);\
+            b.b = N(readCode)(strbuf);\
+			result = N(make##TYPE)(a.b,b.b);\
             break;\
         }
 
 #define MULTIPLE(T,TYPE) case N(T) : {\
             char *end;\
-            long c = strtol((*strbuf)[0], &end, 10);\ 
+            long c = strtol((*strbuf)[0], &end, 10);\
             if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){\
                 (*strbuf)++;\
                 VALUE * ls = MALLOC(c * sizeof(VALUE));\
                 for(long i = 0; i < c; i++){\
-                    ls[i] = N(readCode)(strbuf);\
+                    ls[i].b = N(readCode)(strbuf);\
                 }\
 				result = N(make##TYPE)(c,ls);\
             }else{\
@@ -57,14 +60,14 @@
         }
 
 #ifdef SECURE // hack
-FUNCTIONALITY OTHERVALUE OTHERN(readCode)(char***);
+FUNCTIONALITY void * OTHERN(readCode)(char***);
 #endif
 
 
 /*-----------------------------------------------------------------------------
  * Local functions
  *-----------------------------------------------------------------------------*/
-LOCAL char ** split(const char * a_str, const char * a_delim, size_t *len);
+LOCAL char ** split(char * a_str, const char * a_delim,int *len);
 LOCAL void freesplit(char ** a_str);
 
 
@@ -89,7 +92,7 @@ void freesplit(char** sa){
  *  Description:    split a string across delimiters
  * =====================================================================================
  */
-LOCAL char** split(const char *str, const char *delimiter, size_t *len){
+LOCAL char** split(char *str, const char *delimiter,int *len){
     char *text, *p, *first, **array;
     int c;
     char** ret;
@@ -123,8 +126,8 @@ LOCAL char** split(const char *str, const char *delimiter, size_t *len){
  *  Description:    convert triple pointer to VALUE
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
-	VALUE result = {0};
+FUNCTIONALITY void * N(readCode)(char *** strbuf){
+	void * result = NULL;
     char *end;
     long id = strtol((*strbuf)[0], &end, 10); 
     if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
@@ -195,18 +198,24 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
             SINGLE(NULLQ,NullQ) 
 
             case N(IF) : {
-                VALUE a = N(readCode)(strbuf);
-                VALUE b = N(readCode)(strbuf);
-                VALUE c = N(readCode)(strbuf);
-			    result  = N(makeIf)(a,b,c);
+                VALUE a;
+                VALUE b; 
+                VALUE c;
+                a.b = N(readCode)(strbuf);
+                b.b = N(readCode)(strbuf);
+                c.b = N(readCode)(strbuf);
+			    result  = N(makeIf)(a.b,b.b,c.b);
                 break;
             }
 
             case N(LET) : {
-                VALUE a = N(readCode)(strbuf);
-                VALUE b = N(readCode)(strbuf);
-                VALUE c = N(readCode)(strbuf);
-			    result = N(makeLet)(a,b,c);
+                VALUE a;
+                VALUE b; 
+                VALUE c;
+                a.b = N(readCode)(strbuf);
+                b.b = N(readCode)(strbuf);
+                c.b = N(readCode)(strbuf);
+			    result = N(makeLet)(a.b,b.b,c.b);
                 break;
             }
 
@@ -220,11 +229,12 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
                     VALUE * ls = MALLOC(c * sizeof(VALUE)); 
-                    VALUE body = N(readCode)(strbuf);
+                    VALUE body; 
+                    body.b = N(readCode)(strbuf);
                     for(int i = 0; i < c; i++){
-                        ls[i] = N(readCode)(strbuf);
+                        ls[i].b = N(readCode)(strbuf);
                     }
-                    result = N(makeLambda)(c,body,ls);
+                    result = N(makeLambda)(c,body.b,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
@@ -243,9 +253,11 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                     switch(c){
                     
                         case -1 : {
-                            VALUE a = N(readCode)(strbuf);
-                            VALUE b = N(readCode)(strbuf);
-                            result = N(makePair)(a,b);
+                            VALUE a;
+                            VALUE b; 
+                            a.b = N(readCode)(strbuf);
+                            b.b = N(readCode)(strbuf);
+                            result = N(makePair)(a.b,b.b);
                             break;
                         }
 
@@ -257,7 +269,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                         default : {
                             VALUE * ls = MALLOC(c * sizeof(VALUE)); 
                             for(int i = 0; i < c; i++){
-                                ls[i] = N(readCode)(strbuf);
+                                ls[i].b = N(readCode)(strbuf);
                             }
                             result = N(makeList)(c,ls);
                         }
@@ -273,11 +285,12 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
                     VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
-                    VALUE body = N(readCode)(strbuf);
+                    VALUE body; 
+                    body.b  = N(readCode)(strbuf);
                     for(int i = 0; i < 2*c; i++){
-                        ls[i] = N(readCode)(strbuf);
+                        ls[i].b = N(readCode)(strbuf);
                     }
-                    result = N(makeLetrec)(c,body,ls);
+                    result = N(makeLetrec)(c,body.b,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
@@ -304,7 +317,7 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
                     }
                     VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
                     for(int i = 0; i < c; i++){
-                        ls[i] = N(readCode)(strbuf);
+                        ls[i].b = N(readCode)(strbuf);
                     }
                     result = N(makePrim)(c,ref,ls);
                 }else{
@@ -316,8 +329,9 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
 
             #ifdef SECURE 
             case SI : {
-                OTHERVALUE v = OTHERN(readCode)(strbuf); // TODO leak :: passing out memory to the other side !!
-                result       = makeSI(v);
+                OTHERVALUE v; 
+                v.b    = OTHERN(readCode)(strbuf); // TODO leak :: passing out memory to the other side !!
+                result = makeSI(v.b);
                 break;
             }
 
@@ -382,7 +396,7 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
             list +=2;
 		    for(int i = 0; i < *line_n ; i++){
-			    locations[i] = N(readCode)(&list);
+			    locations[i].b = N(readCode)(&list);
 		    }
             
 			// clear data

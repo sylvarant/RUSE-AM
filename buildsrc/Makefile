@@ -106,5 +106,5 @@ all: $(DEF_TARGET)
 #============================================
 
 clean:
-	$(RM) *.o *.o_S *.c *.h *.parser
+	$(RM)  *.c *.h $(SECURE) $(INSECURE) $(SANINSECURE) $(SANINSECURE)
 

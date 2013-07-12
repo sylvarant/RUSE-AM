@@ -115,7 +115,7 @@ typedef union N(Value_u) {
 
 
 // Type of Primitive operation
-typedef VALUE (* N(PrimOp)) (VALUE,VALUE);
+typedef void* (* N(PrimOp)) (void*,void*);
 
 /*-----------------------------------------------------------------------------
  * Descriptors
@@ -260,34 +260,34 @@ struct N(KLet){
  *  Functionality -> Local to scheme, entrypoints are in global.h
  *-----------------------------------------------------------------------------*/
 
-// constructors
-FUNCTIONALITY VALUE N(makeInt)(int); 
-FUNCTIONALITY VALUE N(makeBoolean)(unsigned int);
-FUNCTIONALITY VALUE N(makeIf)(VALUE,VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeLambda)(int,VALUE,VALUE*);
-FUNCTIONALITY VALUE N(makePrim)(int,N(PrimOp),VALUE*);
-FUNCTIONALITY VALUE N(makeSymbol)(char *);
-FUNCTIONALITY VALUE N(makeApplication)(int,VALUE*);
-FUNCTIONALITY VALUE N(makeCallcc)(VALUE);
-FUNCTIONALITY VALUE N(makeSet)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeLet)(VALUE,VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeLetrec)(int,VALUE,VALUE*);
-FUNCTIONALITY VALUE N(makeVoid)(void);
-FUNCTIONALITY VALUE N(makeNop)(void);
-FUNCTIONALITY VALUE N(makeBegin)(int,VALUE*);
-FUNCTIONALITY VALUE N(makeCar)(VALUE);
-FUNCTIONALITY VALUE N(makeCdr)(VALUE);
-FUNCTIONALITY VALUE N(makeCons)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeList)(int,VALUE*);
-FUNCTIONALITY VALUE N(makeNIL)(void);
-FUNCTIONALITY VALUE N(makePair)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeQuote)(VALUE);
-FUNCTIONALITY VALUE N(makePairQ)(VALUE);
-FUNCTIONALITY VALUE N(makeListQ)(VALUE);
-FUNCTIONALITY VALUE N(makeNullQ)(VALUE);
-FUNCTIONALITY VALUE N(makeDefine)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(makeContinuation)(KONT);
-FUNCTIONALITY VALUE N(makeClosure)(VALUE,BINDING*);
+// constructors - these functions cross spm boundaries -> pass value as pointer
+FUNCTIONALITY void * N(makeInt)(int); 
+FUNCTIONALITY void * N(makeBoolean)(unsigned int);
+FUNCTIONALITY void * N(makeIf)(void *,void *,void *);
+FUNCTIONALITY void * N(makeLambda)(int,void *,VALUE*);
+FUNCTIONALITY void * N(makePrim)(int,N(PrimOp),VALUE*);
+FUNCTIONALITY void * N(makeSymbol)(char *);
+FUNCTIONALITY void * N(makeApplication)(int,VALUE*);
+FUNCTIONALITY void * N(makeCallcc)(void *);
+FUNCTIONALITY void * N(makeSet)(void *,void *);
+FUNCTIONALITY void * N(makeLet)(void *,void *,void *);
+FUNCTIONALITY void * N(makeLetrec)(int,void *,VALUE*);
+FUNCTIONALITY void * N(makeVoid)(void);
+FUNCTIONALITY void * N(makeNop)(void);
+FUNCTIONALITY void * N(makeBegin)(int,VALUE*);
+FUNCTIONALITY void * N(makeCar)(void *);
+FUNCTIONALITY void * N(makeCdr)(void *);
+FUNCTIONALITY void * N(makeCons)(void *,void *);
+FUNCTIONALITY void * N(makeList)(int,VALUE*);
+FUNCTIONALITY void * N(makeNIL)(void);
+FUNCTIONALITY void * N(makePair)(void *,void *);
+FUNCTIONALITY void * N(makeQuote)(void *);
+FUNCTIONALITY void * N(makePairQ)(void *);
+FUNCTIONALITY void * N(makeListQ)(void *);
+FUNCTIONALITY void * N(makeNullQ)(void *);
+FUNCTIONALITY void * N(makeDefine)(void *,void *);
+FUNCTIONALITY void * N(makeContinuation)(KONT);
+FUNCTIONALITY void * N(makeClosure)(void *,BINDING*);
 
 // continuations
 FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
@@ -296,17 +296,17 @@ FUNCTIONALITY KONT N(makeKRet)(KONT);
 
 // boundary
 #ifdef SECURE
-FUNCTIONALITY VALUE makeSI(OTHERVALUE);
+FUNCTIONALITY void * makeSI(void *);
 #else
-FUNCTIONALITY VALUE makeIS(int);
+FUNCTIONALITY void * makeIS(int);
 #endif
 
 // memory duplication
-FUNCTIONALITY VALUE N(copyValue)(VALUE);
+//FUNCTIONALITY void * N(copyValue)(void *);
 
 // math TODO probably not language specific
-FUNCTIONALITY VALUE N(sumPrim)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(differencePrim)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(productPrim)(VALUE,VALUE);
-FUNCTIONALITY VALUE N(numequalPrim)(VALUE,VALUE);
+FUNCTIONALITY void* N(sumPrim)(void*,void*);
+FUNCTIONALITY void* N(differencePrim)(void*,void*);
+FUNCTIONALITY void* N(productPrim)(void*,void*);
+FUNCTIONALITY void* N(numequalPrim)(void*,void*);
 

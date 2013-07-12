@@ -84,7 +84,8 @@ LOCAL void debugState(){
         node = node->next;
     }
     DEBUG_PRINT("** CONTINUATION"); 
-    VALUE cc = N(makeContinuation)(mystate->cont);
+    VALUE cc; 
+	cc.b = N(makeContinuation)(mystate->cont);
     char * strc = N(toString)(cc,0);
     DEBUG_PRINT(" --> cont type %s",strc);
     free(strc);
@@ -184,9 +185,10 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         for(int i = 0; i < atom.p->nargs; i++){
             parsed[i] = evalAtom(atom.p->arguments[i]);
         }
-        VALUE sum = atom.p->exec(parsed[0],parsed[1]);
+        VALUE sum;
+		sum.b = atom.p->exec(parsed[0].b,parsed[1].b);
         for(int i = 2; i < atom.p->nargs; i++){
-            sum = atom.p->exec(sum,parsed[i]); 
+            sum.b = atom.p->exec(sum.b,parsed[i].b); 
         }
         free(parsed);
         return sum; 
@@ -217,7 +219,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
                 VALUE * list = MALLOC(ptr.ls->nargs * (sizeof(VALUE))); 
                 for(int i =0; i < ptr.ls->nargs; i++){
-                   list[i] = makeSI(ptr.ls->args[i]);   
+                   list[i].b = makeSI((ptr.ls->args[i]).b);   
                 }
 
                 struct N(List) * data = MALLOC(sizeof(struct N(List)));
@@ -231,25 +233,31 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             }
          
             case OTHERN(BOOLEAN) :{
-                return N(makeBoolean)(ptr.b->value);
+				VALUE v;
+				v.b =  N(makeBoolean)(ptr.b->value);
+                return v;
             }
 
             case OTHERN(INT) :{ 
-                return N(makeInt)(ptr.b->value);
-            }
+				VALUE v;
+				v.b = N(makeInt)(ptr.b->value);
+                return v;          
+			}
 
             case OTHERN(CLOSURE) : {
                 int c = mystate->free_adr;
-                mystate->storage[mystate->free_adr] = N(makeSymbol)("a");
+                mystate->storage[mystate->free_adr].b = N(makeSymbol)("a");
                 insertLabel(&(mystate->label),mystate->free_adr);
                 DEBUG_PRINT("Adding Label (A) == %d",c);
                 mystate->free_adr++;
                 OTHERVALUE * ls = MALLOC(2 * sizeof(OTHERVALUE));
-                ls[0] = ptr;
-                ls[1] = makeIS(c);
+                ls[0].b = ptr.b;
+                ls[1].b = makeIS(c);
                 VALUE * la = MALLOC(1 * sizeof(VALUE));
-                la[0] = N(makeSymbol)("a");
-                return evalAtom(N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ls)),la));
+                la[0].b = N(makeSymbol)("a");
+				VALUE v; 
+				v.b = N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ls)),la);
+                return evalAtom(v);
             }
 
             default : break;
@@ -281,9 +289,10 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
     #endif
 
     case N(LAM) :{
-	    return N(makeClosure)(atom,mystate->env);
+		VALUE l;
+		l.b =  N(makeClosure)(atom.b,mystate->env);
+	    return l;
     }
-
 
     case N(QUOTE) :
         return atom.q->arg; 
@@ -447,7 +456,8 @@ LOCAL LIMBO step()
 
         case N(CALLCC) : {
             VALUE proc = evalAtom(mystate->control.cc->function);
-            VALUE curr = N(makeContinuation)(mystate->cont);
+            VALUE curr; 
+			curr.b = N(makeContinuation)(mystate->cont);
             LIMBO res = apply(proc,&curr);
             return res;
         }
@@ -457,7 +467,8 @@ LOCAL LIMBO step()
             int adress = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = val; 
-            VALUE empty = N(makeNop());
+            VALUE empty; 
+			empty.b = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
@@ -476,7 +487,8 @@ LOCAL LIMBO step()
             int adress = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
             FREECELL((mystate->storage[adress]))
             mystate->storage[adress] = (val); // MEM
-            VALUE empty = N(makeNop());
+            VALUE empty; 
+			empty.b = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
@@ -562,7 +574,9 @@ LOCAL LIMBO step()
                     val.ls->nargs--;
                     return applyKont(val,mystate->cont); 
                 }else if(val.ls->nargs == 1) {
-                    return applyKont(N(makeNIL()),mystate->cont);
+					VALUE nn;
+					nn.b = N(makeNIL)();
+                    return applyKont(nn,mystate->cont);
                 }
                 else{
                     DEBUG_PRINT("Empty List!!");
@@ -591,7 +605,9 @@ LOCAL LIMBO step()
                 v2.ls->nargs++;
                 return applyKont(v2,mystate->cont);   
             }
-            return applyKont(N(makePair)(v,v2),mystate->cont);   
+			VALUE p;
+			p.b  = N(makePair)(v.b,v2.b);
+            return applyKont(p,mystate->cont);   
         }
 
         case N(PAIRQ) : {
@@ -599,9 +615,13 @@ LOCAL LIMBO step()
 
             if(v.ls->t == N(LIST)){
                 if(v.ls->islist == 1){
-                    return applyKont(N(makeBoolean)((v.ls->nargs > 0)),mystate->cont);  
+					VALUE p;
+					p.b = N(makeBoolean)((v.ls->nargs > 0));
+                    return applyKont(p,mystate->cont);  
                 }
-                return applyKont(N(makeBoolean)((v.ls->nargs > 1)),mystate->cont);  
+				VALUE nn;
+				nn.b = N(makeBoolean)((v.ls->nargs > 1));
+                return applyKont(nn,mystate->cont);  
             }
             else{
                 DEBUG_PRINT("Expected List");
@@ -612,7 +632,9 @@ LOCAL LIMBO step()
         case N(LISTQ) : {
             VALUE v = evalAtom(mystate->control.lq->arg);  
             if(v.ls->t == N(LIST)){
-                return applyKont(N(makeBoolean)(v.ls->islist),mystate->cont); 
+				VALUE p;
+				p.b = N(makeBoolean)(v.ls->islist);
+                return applyKont(p,mystate->cont); 
             }
             else{
                 DEBUG_PRINT("Expected List");
@@ -623,7 +645,9 @@ LOCAL LIMBO step()
         case N(NULLQ) : {
             VALUE v = evalAtom(mystate->control.nq->arg);  
             if(v.ls->t == N(LIST)){
-                return applyKont(N(makeBoolean)(v.ls->nargs == 0),mystate->cont); 
+				VALUE p;
+				p.b = N(makeBoolean)(v.ls->nargs == 0);
+                return applyKont(p,mystate->cont); 
             }
             else{
                 DEBUG_PRINT("Expected List");
@@ -725,9 +749,9 @@ ENTRYPOINT void * secure_eval(int label){
         // No Heap
         switch(in.tt){
             case N(VOID) :
-                return OTHERN(makeVoid)().b;
+                return OTHERN(makeVoid)();
             case N(NOP) :
-                return OTHERN(makeNop)().b;
+                return OTHERN(makeNop)();
 
             default : break;
             
@@ -746,7 +770,7 @@ ENTRYPOINT void * secure_eval(int label){
                     insertLabel(&(mystate->label),mystate->free_adr);
                     DEBUG_PRINT("Adding Label (A) == %d",d);
                     mystate->free_adr++;
-                    list[i] = makeIS(d);   
+                    list[i].b = makeIS(d);   
                 }
 
                 struct OTHERN(List) * data = MALLOC(sizeof(struct OTHERN(List)));
@@ -759,11 +783,11 @@ ENTRYPOINT void * secure_eval(int label){
             }
 
             case N(BOOLEAN) : {
-                return (OTHERN(makeBoolean)(in.b->value)).b; 
+                return (OTHERN(makeBoolean)(in.b->value)); 
             }
 
             case N(INT) : {
-                return (OTHERN(makeInt)(in.z->value)).b; 
+                return (OTHERN(makeInt)(in.z->value)); 
             }
 
             case N(CLOSURE) : {
@@ -771,17 +795,17 @@ ENTRYPOINT void * secure_eval(int label){
                 mystate->free_adr++;
                 insertLabel(&(mystate->label),c);
                 VALUE * ls = MALLOC(2 * sizeof(VALUE));
-                ls[0] = in;
-                ls[1] = makeSI(OTHERN(makeSymbol)("z"));
-                mystate->storage[c] = N(makeApplication)(2,ls);
+                ls[0].b = in.b;
+                ls[1].b = makeSI(OTHERN(makeSymbol)("z"));
+                mystate->storage[c].b = N(makeApplication)(2,ls);
                 #ifdef DEBUG
                 char * strc = N(toString)(mystate->storage[c],0);
                 DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,strc);
                 free(strc);
                 #endif
                 OTHERVALUE * la = MALLOC(1 * sizeof(OTHERVALUE));
-                la[0] = OTHERN(makeSymbol)("z");
-                return (OTHERN(makeLambda)(1,makeIS(c),la)).b; 
+                la[0].b = OTHERN(makeSymbol)("z");
+                return (OTHERN(makeLambda)(1,makeIS(c),la)); 
             }
 
             default : break;

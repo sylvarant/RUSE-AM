@@ -21,12 +21,12 @@
  *-----------------------------------------------------------------------------*/
 
 // Compress similar make definitions
-#define MAKE_(TYPE,TAG,ID,ARG) FUNCTIONALITY VALUE N(make##TYPE)(VALUE v){\
+#define MAKE_(TYPE,TAG,ID,ARG) FUNCTIONALITY void* N(make##TYPE)(void* v){\
     VALUE val;\
     val.ID      = MALLOC(sizeof(struct TYPE));\
     val.ID->t       = N(TAG);\
-    val.ID->ARG = v; \
-    return val;\
+    val.ID->ARG.b = v; \
+    return val.b;\
 }
 
 // Compress similar copy definitions
@@ -47,8 +47,11 @@
  *  Description:    sum operation
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(sumPrim)(VALUE a, VALUE b) {
-    return N(makeInt)(a.z->value + b.z->value) ;
+FUNCTIONALITY void* N(sumPrim)(void* a,void* b) {
+    VALUE aa;VALUE bb;
+    aa.b = a;
+    bb.b = b;
+    return N(makeInt)(aa.z->value + bb.z->value);
 }
 
 
@@ -58,8 +61,11 @@ FUNCTIONALITY VALUE N(sumPrim)(VALUE a, VALUE b) {
  *  Description:    product operation
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(productPrim)(VALUE a, VALUE b) {
-    return N(makeInt)(a.z->value * b.z->value) ;
+FUNCTIONALITY void* N(productPrim)(void* a, void* b) {
+    VALUE aa;VALUE bb;
+    aa.b = a;
+    bb.b = b;
+    return N(makeInt)(aa.z->value * bb.z->value);
 }
 
 
@@ -69,8 +75,11 @@ FUNCTIONALITY VALUE N(productPrim)(VALUE a, VALUE b) {
  *  Description:    difference operation
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(differencePrim)(VALUE a, VALUE b) {
-    return N(makeInt)(a.z->value - b.z->value) ;
+FUNCTIONALITY void* N(differencePrim)(void* a, void* b) {
+    VALUE aa;VALUE bb;
+    aa.b = a;
+    bb.b = b;
+    return N(makeInt)(aa.z->value - bb.z->value);
 }
 
 /* 
@@ -79,8 +88,11 @@ FUNCTIONALITY VALUE N(differencePrim)(VALUE a, VALUE b) {
  *  Description:    equal operation
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(numequalPrim)(VALUE a, VALUE b) {
-    return N(makeBoolean)(a.z->value == b.z->value) ;
+FUNCTIONALITY void* N(numequalPrim)(void* a, void* b) {
+    VALUE aa;VALUE bb;
+    aa.b = a;
+    bb.b = b;
+    return N(makeBoolean)(aa.z->value == bb.z->value);
 }
 
 /* 
@@ -89,12 +101,12 @@ FUNCTIONALITY VALUE N(numequalPrim)(VALUE a, VALUE b) {
  *  Description:    create a VALUE INT
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeInt)(int n) {
+FUNCTIONALITY void* N(makeInt)(int n) {
     VALUE v;
     v.z = MALLOC(sizeof(struct N(Int)));
     v.z->t = N(INT) ;
     v.z->value = n ;
-    return v ;
+    return v.b;
 }
 
 /* 
@@ -103,7 +115,7 @@ FUNCTIONALITY VALUE N(makeInt)(int n) {
  *  Description:    create a VALUE BOOLEAN
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeBoolean)(unsigned int b) {
+FUNCTIONALITY void* N(makeBoolean)(unsigned int b) {
 
     // TODO this optimization should be more visible
     static struct N(Boolean) datatrue  = {N(BOOLEAN),1};
@@ -112,7 +124,7 @@ FUNCTIONALITY VALUE N(makeBoolean)(unsigned int b) {
     VALUE v ;
     if(b){ v.b = &datatrue;}
     else{ v.b = &datafalse;}
-    return v ;
+    return v.b;
 }
 
 #ifdef SECURE
@@ -123,12 +135,12 @@ FUNCTIONALITY VALUE N(makeBoolean)(unsigned int b) {
  *  Description:    create a VALUE across the boundary to the InSecure
  * =====================================================================================
  */
-FUNCTIONALITY VALUE makeSI(OTHERVALUE n) {
+FUNCTIONALITY void* makeSI(void* n) {
     VALUE v;
     v.i = MALLOC(sizeof(struct SI));
     v.i->t = SI ;
-    v.i->arg = n ;
-    return v ;
+    v.i->arg.b = n ;
+    return v.b;
 }
 
 #else
@@ -139,13 +151,13 @@ FUNCTIONALITY VALUE makeSI(OTHERVALUE n) {
  *  Description:    create a Value across the boundary to the Secure
  * =====================================================================================
  */
-FUNCTIONALITY Value makeIS(int n) {
+FUNCTIONALITY void* makeIS(int n) {
     Value v;
     struct IS * data = (struct IS*) malloc(sizeof(struct IS));
     v.i = data;
     v.i->t = IS ;
     v.i->label = n ;
-    return v ;
+    return v.b;
 }
 #endif
 
@@ -155,14 +167,14 @@ FUNCTIONALITY Value makeIS(int n) {
  *  Description:    create a If VALUE : if a then b else c
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeIf)(VALUE a,VALUE b,VALUE c){
+FUNCTIONALITY void* N(makeIf)(void* a,void* b,void* c){
     VALUE v;
     v.f =  MALLOC(sizeof(struct N(If)));
     v.f->t    = N(IF);
-    v.f->cond = a;
-    v.f->cons = b;
-    v.f->alt  = c;
-    return v;
+    v.f->cond.b = a;
+    v.f->cons.b = b;
+    v.f->alt.b  = c;
+    return v.b;
 }
 
 
@@ -172,15 +184,15 @@ FUNCTIONALITY VALUE N(makeIf)(VALUE a,VALUE b,VALUE c){
  *  Description:    create a λ VALUE with c variables 
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,VALUE *ls){
+FUNCTIONALITY void* N(makeLambda)(int c,void* body,VALUE *ls){
 
     VALUE v;
     v.l = MALLOC(sizeof(struct N(Lambda)));
     v.l->t = N(LAM);
     v.l->nargs = c;
-    v.l->body  = body;
+    v.l->body.b  = body;
     v.l->arguments = ls;
-    return v;
+    return v.b;
 }
 
 
@@ -190,14 +202,14 @@ FUNCTIONALITY VALUE N(makeLambda)(int c,VALUE body,VALUE *ls){
  *  Description:    create a Primitive computation VALUE: (ex i_1 ... i_c)
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
+FUNCTIONALITY void* N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
     VALUE v;
     v.p = MALLOC(sizeof(struct N(Prim)));
     v.p->t = N(PRIM);
     v.p->exec  = ex;
     v.p->nargs = c;
     v.p->arguments = ls;
-    return v;
+    return v.b;
 }
 
 
@@ -207,13 +219,13 @@ FUNCTIONALITY VALUE N(makePrim)(int c,N(PrimOp) ex,VALUE *ls){
  *  Description:    create a Application VALUE with c arguments
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE * list){
+FUNCTIONALITY void* N(makeApplication)(int c,VALUE * list){
     VALUE v;
     v.a = MALLOC(sizeof(struct N(Application)));
     v.a->t         = N(APPLICATION);
     v.a->nargs = c;
     v.a->arguments = list;
-    return v;
+    return v.b;
 }
 
 
@@ -223,12 +235,12 @@ FUNCTIONALITY VALUE N(makeApplication)(int c,VALUE * list){
  *  Description:    create a SYMBOL VALUE  with given name
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeSymbol)(char * name){
+FUNCTIONALITY void* N(makeSymbol)(char * name){
     VALUE v;
     v.s = MALLOC(sizeof(struct N(Symbol)));
     v.s->t    = N(SYMBOL);
     v.s->name = name;
-    return v;
+    return v.b;
 }
 
 
@@ -238,13 +250,13 @@ FUNCTIONALITY VALUE N(makeSymbol)(char * name){
  *  Description:    create a Closure VALUE for a given lambda and environment
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeClosure)(VALUE lambda, BINDING * env){
+FUNCTIONALITY void* N(makeClosure)(void* lambda, BINDING * env){
         VALUE clos;
         clos.c = MALLOC(sizeof(struct N(Closure)));
         clos.c->t      = N(CLOSURE);
-        clos.c->lambda = lambda;
+        clos.c->lambda.b = lambda;
         clos.c->env = env;
-		return clos;
+		return clos.b;
 }
 
 
@@ -263,13 +275,13 @@ MAKE_(Callcc,CALLCC,cc,function)
  *  Description:    create a SetV
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeSet)(VALUE v,VALUE t){
+FUNCTIONALITY void* N(makeSet)(void* v,void* t){
     VALUE val;
     val.sv        = MALLOC(sizeof(struct N(SetV)));
     val.sv->t     = N(SET);
-    val.sv->var   = v;
-    val.sv->value = t;
-    return val;
+    val.sv->var.b   = v;
+    val.sv->value.b = t;
+    return val.b;
 }
 
 
@@ -279,14 +291,14 @@ FUNCTIONALITY VALUE N(makeSet)(VALUE v,VALUE t){
  *  Description:    create a Let VALUE
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeLet)(VALUE v,VALUE t,VALUE b){
+FUNCTIONALITY void* N(makeLet)(void* v,void* t,void* b){
     VALUE val;
     val.lt       = MALLOC(sizeof(struct N(Let)));
     val.lt->t    = N(LET);
-    val.lt->var  = v;
-    val.lt->expr = t;
-    val.lt->body = b;
-    return val;
+    val.lt->var.b  = v;
+    val.lt->expr.b = t;
+    val.lt->body.b = b;
+    return val.b;
 }
 
 /* 
@@ -295,15 +307,15 @@ FUNCTIONALITY VALUE N(makeLet)(VALUE v,VALUE t,VALUE b){
  *  Description:    create a Letrec VALUE
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE * t){
+FUNCTIONALITY void* N(makeLetrec)(int c,void* v,VALUE * t){
     VALUE val;
     val.lr        = MALLOC(sizeof(struct N(Letrec)));
     val.lr->t     = N(LETREC);
     val.lr->nargs = c;
-    val.lr->body  = v;
+    val.lr->body.b  = v;
     val.lr->vars  = t;
     val.lr->exprs = (t+c);
-    return val;
+    return val.b;
 }
 
 
@@ -314,12 +326,12 @@ FUNCTIONALITY VALUE N(makeLetrec)(int c,VALUE v,VALUE * t){
  *                  around N(Kont)
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeContinuation)(KONT kstar){
+FUNCTIONALITY void* N(makeContinuation)(KONT kstar){
     VALUE val;
     val.k        = MALLOC(sizeof(struct N(Continuation)));
     val.k->t     = N(CONTINUATION);
     val.k->kstar = kstar;
-    return val;
+    return val.b;
 }
 
 
@@ -329,10 +341,10 @@ FUNCTIONALITY VALUE N(makeContinuation)(KONT kstar){
  *  Description:    create a simple void statement
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeVoid)(void){
+FUNCTIONALITY void* N(makeVoid)(void){
     VALUE val;
     val.tt = N(VOID);
-    return val;
+    return val.b;
 }
 
 
@@ -342,10 +354,10 @@ FUNCTIONALITY VALUE N(makeVoid)(void){
  *  Description:    create a simple no operation statement
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeNop)(void){
+FUNCTIONALITY void* N(makeNop)(void){
     VALUE val;
     val.tt = N(NOP);
-    return val;
+    return val.b;
 }
 
 
@@ -355,14 +367,14 @@ FUNCTIONALITY VALUE N(makeNop)(void){
  *  Description:    create begin with c sub expressions
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeBegin)(int c, VALUE * args){
+FUNCTIONALITY void* N(makeBegin)(int c, VALUE * args){
 
     VALUE v;
     v.bg = MALLOC(sizeof(struct N(Begin)));
     v.bg->t         = N(BEGIN);
     v.bg->nargs = c;
     v.bg->stmts = args;
-    return v;
+    return v.b;
 }
 
 /* 
@@ -387,13 +399,13 @@ MAKE_(Cdr,CDR,cdr,arg)
  *  Description:    create a cons VALUE which adds two lists to produce a new one
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeCons)(VALUE v,VALUE v2){
+FUNCTIONALITY void* N(makeCons)(void* v,void* v2){
     VALUE val;
     val.cons       = MALLOC(sizeof(struct N(Cons)));
     val.cons->t    = N(CONS);
-    val.cons->arg  = v;
-    val.cons->arg2 = v2;
-    return val;
+    val.cons->arg.b  = v;
+    val.cons->arg2.b = v2;
+    return val.b;
 }
 
 /* 
@@ -402,7 +414,7 @@ FUNCTIONALITY VALUE N(makeCons)(VALUE v,VALUE v2){
  *  Description:    create a list of c elements
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeList)(int c,VALUE * args){
+FUNCTIONALITY void* N(makeList)(int c,VALUE * args){
     VALUE v;
 
     v.ls         = MALLOC(sizeof(struct N(List)));
@@ -410,7 +422,7 @@ FUNCTIONALITY VALUE N(makeList)(int c,VALUE * args){
     v.ls->islist = 1;
     v.ls->nargs  = c;
     v.ls->args = args;
-    return v;
+    return v.b;
 }
 
 /* 
@@ -419,14 +431,14 @@ FUNCTIONALITY VALUE N(makeList)(int c,VALUE * args){
  *  Description:    create an empty list
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeNIL)(void){
+FUNCTIONALITY void* N(makeNIL)(void){
     VALUE v;
     v.ls         = MALLOC(sizeof(struct N(List)));
     v.ls->t      = N(LIST);
     v.ls->nargs  = 0;
     v.ls->islist = 1;
     v.ls->args   = NULL;
-    return v;
+    return v.b;
 }
 
 /* 
@@ -435,13 +447,14 @@ FUNCTIONALITY VALUE N(makeNIL)(void){
  *  Description:    return a pair (v,v2)
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makePair)(VALUE v,VALUE v2){
+FUNCTIONALITY void* N(makePair)(void* v,void* v2){
 	VALUE * ls = MALLOC(2 * sizeof(VALUE));
-	ls[0]          = v;
-	ls[1]          = v2;
-    VALUE ret      = N(makeList)(2,ls);
+	ls[0].b          = v;
+	ls[1].b          = v2;
+    VALUE ret;      
+	ret.b = N(makeList)(2,ls);
     ret.ls->islist = 0;
-    return ret;
+    return ret.b;
 }
 
 /* 
@@ -482,22 +495,23 @@ MAKE_(NullQ,NULLQ,nq,arg)
  *  Description:    create a Define statement
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(makeDefine)(VALUE v,VALUE v2){
+FUNCTIONALITY void* N(makeDefine)(void* v,void* v2){
     VALUE val;
     val.d       = MALLOC(sizeof(struct N(Define)));
     val.d->t    = N(DEFINE);
-    val.d->var  = v;
-    val.d->expr = v2;
-    return val;
+    val.d->var.b  = v;
+    val.d->expr.b = v2;
+    return val.b;
 }
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    copyValue
  *  Description:    copy a VALUE's memory contents
+ *      TODO I don't think this is needed
  * =====================================================================================
  */
-FUNCTIONALITY VALUE N(copyValue)(VALUE par){
+/*FUNCTIONALITY VALUE N(copyValue)(VALUE par){
 
     // No heap involved
     switch(par.tt){
@@ -643,6 +657,6 @@ FUNCTIONALITY VALUE N(copyValue)(VALUE par){
         default :
             DEBUG_PRINT("Could not Copy !!!");
             exit(1);
-}}
+}}*/
 
 

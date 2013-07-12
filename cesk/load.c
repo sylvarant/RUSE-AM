@@ -16,10 +16,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 #include "cesk.h"
 
-#include <string.h>
+
 
 /*-----------------------------------------------------------------------------
  * Macro's 
@@ -38,11 +40,12 @@
         }
 
 #define MULTIPLE(T,TYPE) case N(T) : {\
-            int c = -1;\
-            if(sscanf((*strbuf)[0], "%d",&c) == 1){\
+            char *end;\
+            long c = strtol((*strbuf)[0], &end, 10);\ 
+            if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){\
                 (*strbuf)++;\
                 VALUE * ls = MALLOC(c * sizeof(VALUE));\
-                for(int i = 0; i < c; i++){\
+                for(long i = 0; i < c; i++){\
                     ls[i] = N(readCode)(strbuf);\
                 }\
 				result = N(make##TYPE)(c,ls);\
@@ -121,221 +124,222 @@ LOCAL char** split(const char *str, const char *delimiter, size_t *len){
  * =====================================================================================
  */
 FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
-    int id = -1;
 	VALUE result = {0};
-    if(sscanf((*strbuf)[0],"%d",&id) == 1){
-    (*strbuf)++;
-    switch(id){
+    char *end;
+    long id = strtol((*strbuf)[0], &end, 10); 
+    if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+        (*strbuf)++;
+        switch(id){
 
-        case N(ERROR) :
-            DEBUG_PRINT("Error in input file !!");
-            break;
+            case N(ERROR) :
+                DEBUG_PRINT("Error in input file !!");
+                break;
                 
-        case N(VOID) : 
-            result = N(makeVoid)(); 
-            break;
+            case N(VOID) : 
+                result = N(makeVoid)(); 
+                break;
 
-        case N(NOP) :
-            result = N(makeNop)(); 
-            break;
+            case N(NOP) :
+                result = N(makeNop)(); 
+                break;
 
-        case N(INT) : {
-            int temp = -1;    
-            if(sscanf((*strbuf)[0], "%d",&temp) == 1){
-                (*strbuf)++;
-                result = N(makeInt)(temp);
-            }else{
-                DEBUG_PRINT("ERROR: Missing Identifier @INT.");
-                exit(1);
+            case N(INT) : {
+                char *end;
+                long temp = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    result = N(makeInt)((int) temp);
+                }else{
+                    DEBUG_PRINT("ERROR: Missing Identifier @INT.");
+                    exit(1);
+                }
+                break;
             }
-            break;
-        }
 
-        case N(BOOLEAN) : {
-            int temp = -1;    
-            if(sscanf((*strbuf)[0],"%d",&temp) == 1){ 
-                (*strbuf)++;
-				result = N(makeBoolean)(temp);
-            }else{
-                DEBUG_PRINT("ERROR: Missing Identifier @ BOOLEAN.");
-                exit(1);
+            case N(BOOLEAN) : {
+                char *end;
+                long temp = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+				    result = N(makeBoolean)((int)temp);
+                }else{
+                    DEBUG_PRINT("ERROR: Missing Identifier @ BOOLEAN.");
+                    exit(1);
+                }
+                break;
             }
-            break;
-        }
 
-        case N(SYMBOL) : {
-            int c = -1;    
-            if(sscanf((*strbuf)[0], "%d",&c) == 1){ 
-                (*strbuf)++;
-                char * temp = MALLOC((c+1) * sizeof(char));    
-                if(sscanf((*strbuf)[0], "%s",temp) == 1){ 
+            case N(SYMBOL) : {
+                char *end;
+                long c = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    char * temp = MALLOC((c+1) * sizeof(char));    
+                    temp[0] ='\0'; 
+                    strcat(temp,(*strbuf)[0]);
                     (*strbuf)++;
 					result = N(makeSymbol)(temp);
                 }else{
-                    DEBUG_PRINT("ERROR: Expecting String.");
+                    DEBUG_PRINT("ERROR: Expecting length");
                     exit(1);
                 }
-            }else{
-                DEBUG_PRINT("ERROR: Expecting length");
-                exit(1);
+                break;
             }
-            break;
-        }
 
-        SINGLE(CALLCC,Callcc) 
-        SINGLE(CAR,Car) 
-        SINGLE(CDR,Cdr) 
-        SINGLE(QUOTE,Quote) 
-        SINGLE(PAIRQ,PairQ) 
-        SINGLE(LISTQ,ListQ) 
-        SINGLE(NULLQ,NullQ) 
+            SINGLE(CALLCC,Callcc) 
+            SINGLE(CAR,Car) 
+            SINGLE(CDR,Cdr) 
+            SINGLE(QUOTE,Quote) 
+            SINGLE(PAIRQ,PairQ) 
+            SINGLE(LISTQ,ListQ) 
+            SINGLE(NULLQ,NullQ) 
 
-        case N(IF) : {
-            VALUE a = N(readCode)(strbuf);
-            VALUE b = N(readCode)(strbuf);
-            VALUE c = N(readCode)(strbuf);
-			result  = N(makeIf)(a,b,c);
-            break;
-        }
+            case N(IF) : {
+                VALUE a = N(readCode)(strbuf);
+                VALUE b = N(readCode)(strbuf);
+                VALUE c = N(readCode)(strbuf);
+			    result  = N(makeIf)(a,b,c);
+                break;
+            }
 
-        case N(LET) : {
-            VALUE a = N(readCode)(strbuf);
-            VALUE b = N(readCode)(strbuf);
-            VALUE c = N(readCode)(strbuf);
-			result = N(makeLet)(a,b,c);
-            break;
-        }
+            case N(LET) : {
+                VALUE a = N(readCode)(strbuf);
+                VALUE b = N(readCode)(strbuf);
+                VALUE c = N(readCode)(strbuf);
+			    result = N(makeLet)(a,b,c);
+                break;
+            }
 
-        DOUBLE(SET,Set)
-        DOUBLE(CONS,Cons)
-        DOUBLE(DEFINE,Define)
+            DOUBLE(SET,Set)
+            DOUBLE(CONS,Cons)
+            DOUBLE(DEFINE,Define)
 
-        case N(LAM) : {
-            int c = -1;    
-            if(sscanf((*strbuf)[0], "%d",&c) == 1){ 
-                (*strbuf)++;
-                VALUE * ls = MALLOC(c * sizeof(VALUE)); 
-                VALUE body = N(readCode)(strbuf);
-                for(int i = 0; i < c; i++){
-                    ls[i] = N(readCode)(strbuf);
+            case N(LAM) : {
+                char *end;
+                long c = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    VALUE * ls = MALLOC(c * sizeof(VALUE)); 
+                    VALUE body = N(readCode)(strbuf);
+                    for(int i = 0; i < c; i++){
+                        ls[i] = N(readCode)(strbuf);
+                    }
+                    result = N(makeLambda)(c,body,ls);
+                }else{
+                    DEBUG_PRINT("ERROR: Expecting Argument Count");
+                    exit(1);
                 }
-                result = N(makeLambda)(c,body,ls);
-            }else{
-                DEBUG_PRINT("ERROR: Expecting Argument Count");
-                exit(1);
+                break;
             }
-            break;
-        }
 
-        MULTIPLE(APPLICATION,Application) 
-        MULTIPLE(BEGIN,Begin) 
+            MULTIPLE(APPLICATION,Application) 
+            MULTIPLE(BEGIN,Begin) 
 
-        case N(LIST) : {
-            int c = -2;
-            if(sscanf((*strbuf)[0],"%d",&c) == 1){ 
-                (*strbuf)++;
-                switch(c){
+            case N(LIST) : {
+                char *end;
+                long c = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    switch(c){
                     
-                    case -1 : {
-                        VALUE a = N(readCode)(strbuf);
-                        VALUE b = N(readCode)(strbuf);
-                        result = N(makePair)(a,b);
-                        break;
-                    }
-
-                    case 0 : {
-                        result = N(makeNIL)();
-                        break;
-                    }
-
-                    default : {
-                        VALUE * ls = MALLOC(c * sizeof(VALUE)); 
-                        for(int i = 0; i < c; i++){
-                            ls[i] = N(readCode)(strbuf);
+                        case -1 : {
+                            VALUE a = N(readCode)(strbuf);
+                            VALUE b = N(readCode)(strbuf);
+                            result = N(makePair)(a,b);
+                            break;
                         }
-                        result = N(makeList)(c,ls);
+
+                        case 0 : {
+                            result = N(makeNIL)();
+                            break;
+                        }
+
+                        default : {
+                            VALUE * ls = MALLOC(c * sizeof(VALUE)); 
+                            for(int i = 0; i < c; i++){
+                                ls[i] = N(readCode)(strbuf);
+                            }
+                            result = N(makeList)(c,ls);
+                        }
+
                     }
-
                 }
+                break; 
             }
-            break; 
-        }
 
-        case N(LETREC) : {
-            int c = -1;    
-            if(sscanf((*strbuf)[0],"%d",&c) == 1){ 
-                (*strbuf)++;
-                VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
-                VALUE body = N(readCode)(strbuf);
-                for(int i = 0; i < 2*c; i++){
-                    ls[i] = N(readCode)(strbuf);
+            case N(LETREC) : {
+                char *end;
+                long c = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
+                    VALUE body = N(readCode)(strbuf);
+                    for(int i = 0; i < 2*c; i++){
+                        ls[i] = N(readCode)(strbuf);
+                    }
+                    result = N(makeLetrec)(c,body,ls);
+                }else{
+                    DEBUG_PRINT("ERROR: Expecting Argument Count");
+                    exit(1);
                 }
-                result = N(makeLetrec)(c,body,ls);
-            }else{
-                 DEBUG_PRINT("ERROR: Expecting Argument Count");
-                exit(1);
+                break;
             }
-            break;
-        }
 
-        case N(PRIM) : {
-            int c = -1;    
-            if(sscanf((*strbuf)[0], "%d",&c) == 1){ 
-                (*strbuf)++;
-                char op = -1;
-                N(PrimOp) ref;
-                if(sscanf((*strbuf)[0],"%c",&op) == 1){ 
+            case N(PRIM) : {
+                char *end;
+                long c = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    char op = ((*strbuf)[0])[0];
+                    N(PrimOp) ref;
                     (*strbuf)++; 
                     switch(op){
                         case '+' : ref = N(sumPrim); break;
-                        case '-' : ref = N(differencePrim); break;
+                         case '-' : ref = N(differencePrim); break;
                         case '=' : ref = N(numequalPrim); break;
                         case '*' : ref = N(productPrim); break;
                         default :
                             DEBUG_PRINT("ERROR: Could Not Match Operator");
                             exit(1);
                     }
+                    VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
+                    for(int i = 0; i < c; i++){
+                        ls[i] = N(readCode)(strbuf);
+                    }
+                    result = N(makePrim)(c,ref,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
                 }
-                VALUE * ls = MALLOC((2*c) * sizeof(VALUE)); 
-                for(int i = 0; i < c; i++){
-                    ls[i] = N(readCode)(strbuf);
+                break;
+            }
+
+            #ifdef SECURE 
+            case SI : {
+                OTHERVALUE v = OTHERN(readCode)(strbuf); // TODO leak :: passing out memory to the other side !!
+                result       = makeSI(v);
+                break;
+            }
+
+            #else
+            case IS : { 
+                char *end;
+                long temp = strtol((*strbuf)[0], &end, 10); 
+                if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+                    (*strbuf)++;
+                    result = makeIS((int)temp);
+                }else{
+                    DEBUG_PRINT("ERROR: Missing Identifier @INT.");
+                    exit(1);
                 }
-                result = N(makePrim)(c,ref,ls);
-            }else{
-                DEBUG_PRINT("ERROR: Expecting Argument Count");
-                exit(1);
+                break;
             }
-            break;
-        }
 
-        #ifdef SECURE 
-        case SI : {
-            OTHERVALUE v = OTHERN(readCode)(strbuf); // TODO leak :: passing out memory to the other side !!
-            result       = makeSI(v);
-            break;
+            #endif
+            default :
+            DEBUG_PRINT("ERROR: Unkown Identifier :: %d",id);
+            exit(1);
         }
-
-        #else
-        case IS : { 
-            int temp = -1;    
-            if(sscanf((*strbuf)[0], "%d",&temp) == 1){
-                (*strbuf)++;
-                result = makeIS(temp);
-            }else{
-                DEBUG_PRINT("ERROR: Missing Identifier @INT.");
-                exit(1);
-            }
-            break;
-        }
-
-        #endif
-       default :
-        DEBUG_PRINT("ERROR: Unkown Identifier :: %d",id);
-        exit(1);
-    }
     }else{
         DEBUG_PRINT("ERROR: Missing Identifier @ fscan");
         exit(1);
@@ -353,14 +357,15 @@ FUNCTIONALITY VALUE N(readCode)(char *** strbuf){
  */
 FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 
-    int lang = -1;
 	int ignore = 0;
 	
 	
     char ** list = split(input,"\n",&ignore); 
     char ** orig = list;
-    
-    if(sscanf(list[0],"%d",&lang) == 1){
+
+    char *end;
+    long lang = strtol(list[0], &end, 10); 
+    if (!(end == list[0] || *end != '\0' || errno == ERANGE)){
 
         // TODO improve
         if(lang > 0){
@@ -368,10 +373,12 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
         }
 
         
-        if(sscanf(list[1],"%d",line_n) == 1){
+        char *end2;
+        long lines = strtol(list[1], &end2, 10); 
+        if (!(end == list[1] || *end2 != '\0' || errno == ERANGE)){
 
+            *line_n = (int) lines;
 		    DEBUG_PRINT("Scheme Program -- Expecting %d lines",*line_n);
-
 		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
             list +=2;
 		    for(int i = 0; i < *line_n ; i++){

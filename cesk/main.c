@@ -105,10 +105,15 @@ int main(void){
 
     #ifdef SANCUS_SPM
     WDTCTL = WDTPW | WDTHOLD;
-    protect_sm(&secure_vm);
+    #ifdef FPGA
+    uart_init();
+    #endif
+    //protect_sm(&secure_vm);
     #endif
 
+    #ifdef SANCUS_SPM
     printf("started\n");
+    #endif
 
 	// sload has its secret code built in
     sload(NULL);

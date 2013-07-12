@@ -41,9 +41,9 @@ SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 #============================================
 
 CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g
-SANFLAGS = --debug -DSANCUS_SPM
+SANFLAGS = -DSANCUS_SPM $(FPGA)
 MACFLAGS= -std=gnu99
-SANLDFLAGS = --rom-size 48K --ram-size 10K --verbose --standalone 
+SANLDFLAGS = --rom-size 48K --ram-size 10K  --standalone 
 KEY = deadbeefcafebabedeadbeefcafebabe
 
 #============================================
@@ -89,7 +89,7 @@ darwin: $(INSECURE) $(SECURE)
 	$(LD) -o $(EXEC) $^
 
 $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
-	$(SLD) $(SANLDFLAGS) -o  $@ $^
+	$(SLD) $(SANLDFLAGS) -o  $@ $^ libdev.a
 
 sancus: $(SANEXEC_NO_HMAC) 
 	sancus-hmac --verbose --key $(KEY) -o $(SANEXEC) $(SANEXEC_NO_HMAC)

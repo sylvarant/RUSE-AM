@@ -18,6 +18,9 @@
 
 #include <string.h>
 
+#ifdef FPGA
+    #include "uart.h"
+#endif
 
 #ifdef SECURE // hack
 FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,unsigned int);
@@ -37,8 +40,14 @@ LOCAL char * generateseqString (char * start,int c,VALUE * ls,char * del);
 #ifdef SANCUS_SPM
 int putchar(int c)
 {
+    #ifdef FPGA
+    if(c == '\n'){
+        uart2_write_byte('\r');
+        uart2_write_byte(c);
+    #else
     P1OUT  = c;
     P1OUT |= 0x80;
+    #endif
     return c;
 }
  #endif

@@ -106,5 +106,5 @@ all: $(DEF_TARGET)
 #============================================
 
 clean:
-	$(RM)  *.c *.h $(SECURE) $(INSECURE) $(SANINSECURE) $(SANINSECURE)
+	$(RM)  *.c *.h $(SECURE) $(INSECURE) $(SANSECURE) $(SANINSECURE)
 

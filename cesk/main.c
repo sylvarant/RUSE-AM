@@ -30,8 +30,6 @@
 LOCAL char * read(const char * filen);
 #endif
 
-
-
 #ifdef BYTE
 
 /* 
@@ -107,6 +105,7 @@ int main(void){
 
     #ifdef SANCUS_SPM
     WDTCTL = WDTPW | WDTHOLD;
+    protect_sm(&secure_vm);
     #endif
 
     printf("started\n");

@@ -16,22 +16,13 @@
 #ifndef SECURE_MACRO_INCLUDED
 #define SECURE_MACRO_INCLUDED
 
+#include "spm.h"
 
 /*-----------------------------------------------------------------------------
  *  Modifiers
  *-----------------------------------------------------------------------------*/
 
 #ifdef SANCUS_SPM
-
-    // When using the SPM 
-
-    #include <sancus/sm_support.h>
-    #define __MSP430_INTRINSICS_H_
-    #include <msp430.h>
-    
-    // The SPM Name
-    // TODO set with argument
-    #define SPM_NAME "Spm"
 
     #define LOCAL SM_FUNC(SPM_NAME) static
     #define SECRET_DATA SM_DATA(SPM_NAME) static 

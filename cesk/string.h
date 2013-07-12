@@ -14,7 +14,7 @@
  */
 
 // Only Strings in Secure when debugging
-#if defined(DEBUG) || !defined(INSECURE)
+#if defined(DEBUG) || !defined(SECURE)
 
 #ifndef STRING_INCLUDED
 #define STRING_INCLUDED

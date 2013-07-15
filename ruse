@@ -5,7 +5,7 @@
 ############################
 # Script variables
 ############################
-options="nslpdfwc"
+options="hnslpdfwc"
 Usage="Usage : `basename $0` [-$options] sourcefile"
 slast="${@:(-2):1}"
 last=${!#}
@@ -35,6 +35,7 @@ native_2="buildsrc/input2.c"
 unamestr_os=`uname`
 base=""
 bytext=""
+fpga=""
 
 
 ############################
@@ -55,8 +56,8 @@ function capitalize
 function log
 {
 
-    if [ $# -ne 6 ]; then
-        echo -e "Log needs 4 arguments"
+    if [ $# -ne 7 ]; then
+        echo -e "Log needs 7 arguments"
         exit 1
     fi
 
@@ -66,6 +67,11 @@ function log
     echo > $logname
     echo "Platform :: $(capitalize $platform)" >> $logname
     echo "Language :: $(capitalize $language)" >> $logname
+    echo "================= NORMALIZER =================" >> $logname
+    echo >> $logname
+    echo $7 >> $logname
+    echo >> $logname
+    echo "================= DEBUG =================" >> $logname
     echo >> $logname
     echo $2 >> $logname 
     echo >> $logname
@@ -86,6 +92,21 @@ function log
     cat $4 >> $logname
 }
 
+#########################################
+# Function :: sancus_setup
+# configure all options related to sancus
+#########################################
+function sancus_setup
+{
+    if [[ "$unamestr_os" == 'Linux' ]]; then 
+        # TODO add extra checks
+        platform="sancus"
+        bflag=1
+    else
+        echo "Sancus only supported on Linux, aborting ruse"; 
+        exit 1; 
+    fi
+}
 
 ############################
 # Function :: Execute
@@ -105,11 +126,12 @@ function execute
     #logging
     if [[ $lflag -eq 1 ]]; then
         local trace=$(</tmp/ruse_log) 
+        local normalizer=$(</tmp/ruse_parser_log) 
         if [[ $# -eq 2 ]]; then
             ./tools/bytetoc.pl  $1 > $native_1
             ./tools/bytetoc.pl --secure $2 > $native_2
         fi
-        log $last $trace $native_1 $native_2 $byte_1 $byte_2
+        log $last $trace $native_1 $native_2 $byte_1 $byte_2 $normalizer
 	else
 		cat /tmp/ruse_log
     fi
@@ -138,7 +160,7 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
-            $cscheme $front/scheme/genc.scm < $1 > buildsrc/result.parser
+            $cscheme $front/scheme/genc.scm < $1  1> buildsrc/result.parser 2>/tmp/ruse_parser_log
 
             #todo only when no file input
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
@@ -218,7 +240,7 @@ function compile
     #make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
 
     # Make 
-    make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
+    make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt FPGA=$fpga  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 
 
@@ -249,16 +271,15 @@ do
     n) bflag=1
         ;;
 
+    h)  fpga=1
+        sancus_setup
+        break
+        ;;
+
     # sancus as platform
-    s)  if [[ "$unamestr_os" == 'Linux' ]]; then 
-            # TODO add extra checks
-            platform="sancus"
-            bflag=1
-        else
-            echo "Sancus only supported on Linux, aborting ruse"; 
-            exit 1; 
-        fi
-            ;;
+    s)  sancus_setup            
+        break
+        ;;
 
     # compile
     c)  cflag=1

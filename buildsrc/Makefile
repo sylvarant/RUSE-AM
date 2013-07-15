@@ -83,7 +83,6 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 # Linking
 #============================================
 
-
 #todo parameterize inlinking
 darwin: $(INSECURE) $(SECURE)
 	$(LD) -o $(EXEC) $^
@@ -93,6 +92,7 @@ $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 
 sancus: $(SANEXEC_NO_HMAC) 
 	sancus-hmac --verbose --key $(KEY) -o $(SANEXEC) $(SANEXEC_NO_HMAC)
+
 
 #============================================
 # Results

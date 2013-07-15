@@ -224,6 +224,7 @@
     [else   (begin
         (define head (c-gener (car expr) in))   
         (set! xxpr (append (reverse outl) xxpr))
+        (set! outl '())
         (define tail (buildi (cdr expr) in))
         (cons head tail))]
 ))
@@ -252,6 +253,8 @@
 )
 
 
+;; TODO clean the fuck up
+
 ; Atomic should not be normalized !!
 (define (atomic? exp)
   (match exp
@@ -264,17 +267,25 @@
    ; [`(list . ,args) (andmap (λ (x) (atomic? x)) args)]
     [`(quote . ,args)    #t]
     ;[`(IS ,arg)         #t]
-    [`(SI ,arg)         #t]
+    ;[`(SI ,arg)         #t]
     [else                #f]))
 
-(define (evatom? exp) (if (null? exp) #t (match (car exp)
-    [(? atomic?) (evatom? (cdr exp))]
-    [(cons (and oper (? prim?)) args) (evatom? (cdr exp))]
-    [`(λ ,_ ,_) (evatom? (cdr exp))]
-    [`(IS ,_) (evatom? (cdr exp))]
-    [`(SI ,_) (evatom? (cdr exp))]
-    [else #f]
-)))
+
+(define (requireslet? exp) (match exp 
+    [(? atomic?)                        #t]
+    [(cons (and oper (? prim?)) args)   #t]
+    [`(λ ,_ ,_)                         #t]
+    [`(IS ,_)                           #t]
+    [`(SI ,_)                           #t]
+    [else                               #f]
+))
+
+(define (evatom? exp) 
+    (if (null? exp) 
+        #t 
+        (if (requireslet? (car exp))
+            (evatom? (cdr exp))
+             #f)))
 
 
 ;; Expression normalization:
@@ -412,7 +423,7 @@
 
 (define (normalize-name exp k)
   (normalize exp (λ (aexp) 
-    (if (atomic? aexp) (k aexp) 
+    (if (requireslet? aexp) (k aexp) 
         (let ([t (gensym)]) 
          `(let ([,t ,aexp]) ,(k t)))))))
 
@@ -440,15 +451,23 @@
     (if (eof-object? next)
         '()
         (cons next (read-all)))))
+
+
+
+; Output debug information
+(define (debug str)
+    (with-output-to-file "/dev/stderr"
+            (lambda ()
+                (display str)) #:exists 'append ))
+
 ;
 ; START POINT
 (define the-program (read-all))  ; read expr., pass to eval, write result
 (define normalized (normalize-program the-program))
-;(display "/*\n")
-;(display the-program)
-;(display "\n\n")
-;(display normalized) TODO output to something loggable
-;(display "\n*/\n")
+(debug "The Program :: ")
+(debug the-program)
+(debug "\n\n")
+(debug normalized) 
 (create-result emit normalized)
 
 

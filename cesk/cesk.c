@@ -36,7 +36,7 @@ DECLARE_SM(secure_vm,0x1234);
 /*-----------------------------------------------------------------------------
  *  Local Constants
  *-----------------------------------------------------------------------------*/
-enum{NUM_ELEMS = 128};
+enum{NUM_ELEMS = 1024};
 
 /*-----------------------------------------------------------------------------
  *  Local Functions
@@ -136,6 +136,64 @@ LOCAL unsigned int isAtom(VALUE el)
     return 0;
 }
     
+#ifdef SECURE
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    convertin
+ *  Description:    convert the low level values into secure
+ * =====================================================================================
+ */
+LOCAL VALUE convertin(OTHERVALUE ptr){
+    switch(ptr.b->t){
+
+            case OTHERN(BOOLEAN) : {
+				VALUE v;
+				v.b =  N(makeBoolean)(ptr.b->value);
+                return v;
+            }
+
+            case OTHERN(INT) : { 
+				VALUE v;
+				v.b = N(makeInt)(ptr.b->value);
+                return v;          
+			}
+
+            default : {
+                VALUE v;
+                v.b =  makeSI(ptr.b);
+                return v;
+            }
+    }
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    convertout
+ *  Description:    convert the low level values into insecure
+ * =====================================================================================
+ */
+LOCAL void * convertout(VALUE in){
+    switch(in.b->t){
+
+            case N(BOOLEAN) :
+                return (OTHERN(makeBoolean)(in.b->value)); 
+
+            case N(INT) :
+                return (OTHERN(makeInt)(in.z->value)); 
+
+            default :{
+                int d = mystate->free_adr; 
+                mystate->storage[mystate->free_adr] = in;
+                insertLabel(&(mystate->label),mystate->free_adr);
+                DEBUG_PRINT("Adding Label (A) == %d",d);
+                mystate->free_adr++;
+                return makeIS(d);
+            }
+    }
+}
+
+
+#endif
 
 /* 
  * ===  FUNCTION  ======================================================================
@@ -191,7 +249,9 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
     case N(PRIM) :{
         VALUE * parsed = MALLOC(atom.p->nargs * sizeof(VALUE));
         for(int i = 0; i < atom.p->nargs; i++){
+            DEBUG_PRINT(N(toString)(atom.p->arguments[i],0));
             parsed[i] = evalAtom(atom.p->arguments[i]);
+            DEBUG_PRINT(N(toString)(parsed[i],0));
         }
         VALUE sum;
 		sum.b = atom.p->exec(parsed[0].b,parsed[1].b);
@@ -222,12 +282,17 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         // Descriptors
         switch(ptr.b->t){
 
+            case OTHERN(INT) : 
+            case OTHERN(BOOLEAN) :
+            case OTHERN(QUOTE) :
+                return convertin(ptr);
+
             case OTHERN(LIST) :{
                 VALUE v;
 
                 VALUE * list = MALLOC(ptr.ls->nargs * (sizeof(VALUE))); 
                 for(int i =0; i < ptr.ls->nargs; i++){
-                   list[i].b = makeSI((ptr.ls->args[i]).b);   
+                   list[i] = convertin((ptr.ls->args[i]));   
                 }
 
                 struct N(List) * data = MALLOC(sizeof(struct N(List)));
@@ -240,18 +305,6 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
                 return v;
             }
          
-            case OTHERN(BOOLEAN) :{
-				VALUE v;
-				v.b =  N(makeBoolean)(ptr.b->value);
-                return v;
-            }
-
-            case OTHERN(INT) :{ 
-				VALUE v;
-				v.b = N(makeInt)(ptr.b->value);
-                return v;          
-			}
-
             case OTHERN(CLOSURE) : {
                 int c = mystate->free_adr;
                 mystate->storage[mystate->free_adr].b = N(makeSymbol)("a");
@@ -768,17 +821,17 @@ ENTRYPOINT void * secure_eval(int label){
         // Descriptors
         switch(in.b->t){
 
+            case N(QUOTE)   : 
+            case N(BOOLEAN) : 
+            case N(INT)     : 
+                return convertout(in);
+
             case N(LIST) : {
                 OTHERVALUE v;
 
                 OTHERVALUE * list = MALLOC(in.ls->nargs * (sizeof(OTHERVALUE))); 
                 for(int i =0; i < in.ls->nargs; i++){
-                    int d = mystate->free_adr; 
-                    mystate->storage[mystate->free_adr] = in.ls->args[i];
-                    insertLabel(&(mystate->label),mystate->free_adr);
-                    DEBUG_PRINT("Adding Label (A) == %d",d);
-                    mystate->free_adr++;
-                    list[i].b = makeIS(d);   
+                    list[i].b = convertout(in.ls->args[i]);   
                 }
 
                 struct OTHERN(List) * data = MALLOC(sizeof(struct OTHERN(List)));
@@ -788,14 +841,6 @@ ENTRYPOINT void * secure_eval(int label){
                 data->args = list;
                 v.ls = data;
                 return v.b;
-            }
-
-            case N(BOOLEAN) : {
-                return (OTHERN(makeBoolean)(in.b->value)); 
-            }
-
-            case N(INT) : {
-                return (OTHERN(makeInt)(in.z->value)); 
             }
 
             case N(CLOSURE) : {

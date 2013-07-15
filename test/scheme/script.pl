@@ -16,7 +16,7 @@ foreach (@input){
     $first =~ m|;(?<answ>.*)|;
     my $an = $+{answ};
     (my $solution = $file) =~ s/\.scm$/\.out/;
-    open (MYFILE, ">>$solution");
+    open (MYFILE, ">$solution");
     print MYFILE $an."\n";
     close (MYFILE); 
 }

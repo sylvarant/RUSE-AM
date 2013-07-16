@@ -1,0 +1,77 @@
+(*
+ * =====================================================================================
+ *
+ *       Filename:  ruse.ml
+ *
+ *    Description:  Ruse's version of ML specification
+ *
+ *         Author:  Adriaan Larmuseau, ajhl
+ *        Company:  Distrinet, Kuleuven
+ *
+ * =====================================================================================
+ *)
+
+(* Requires the Leroy framework for modular modules *)
+open Modules
+
+
+(*-----------------------------------------------------------------------------
+ *  Ruse version of ML
+ *-----------------------------------------------------------------------------*)
+module RuseML =
+struct
+
+    (* language AST *)
+    type term =
+        Constant of int                        
+      | Boolean of bool                      
+      | Longident of path                     
+      | Function of Ident.t * term          
+      | Apply of term * term               
+      | Let of Ident.t * term * term      
+      | IS of simple_type * term                       
+      | SI of simple_type * term                      
+
+    (* Type system *) 
+    and simple_type =
+        Var of type_variable                   
+      | Typeconstr of path * simple_type list  
+
+    and type_variable =
+      { mutable repres: simple_type option;   
+              mutable level: int }        
+
+    type val_type =
+      { quantif: type_variable list;         
+        body: simple_type }                 
+
+    type def_type =
+      { params: type_variable list;        
+        defbody: simple_type }            
+    type kind = { arity: int }
+
+    let rec subst_type subst = function
+        Var {repres = None} as ty -> ty
+      | Var {repres = Some ty} -> subst_type subst ty
+      | Typeconstr(p, tl) ->
+          Typeconstr(Subst.path p subst, List.map (subst_type subst) tl)
+
+    let subst_valtype vty subst =
+      { quantif = vty.quantif;
+        body = subst_type subst vty.body }
+
+    let subst_deftype def subst =
+      { params = def.params;
+        defbody = subst_type subst def.defbody }
+
+    let subst_kind kind subst = kind
+
+end
+
+(*-----------------------------------------------------------------------------
+ *  Apply the Modular Module system to the syntax 
+ *-----------------------------------------------------------------------------*)
+module RuseMLMod = Mod_syntax(RuseML)
+module RuseMLEnv = Env(RuseMLMod)
+
+

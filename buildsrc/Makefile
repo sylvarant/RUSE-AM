@@ -43,7 +43,7 @@ SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g
 SANFLAGS = -DSANCUS_SPM $(FPGA)
 MACFLAGS= -std=gnu99
-SANLDFLAGS = --rom-size 48K --ram-size 10K  --standalone 
+SANLDFLAGS = --rom-size 48K --ram-size 10K  --standalone --sm-stack-size=2048
 KEY = deadbeefcafebabedeadbeefcafebabe
 
 #============================================

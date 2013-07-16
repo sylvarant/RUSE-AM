@@ -1,16 +1,22 @@
-/*  A modular module system.
-    The parser for mini-ML.
-
-    Copyright 1999 Xavier Leroy.
-    This file is distributed under the GNU Public Licence. */
+/*
+ * =====================================================================================
+ *
+ *       Filename:  parser.mly
+ *
+ *    Description:  Parser for Ruse ML based on Leroy's parser for miniML
+ *
+ *         Author:  Adriaan Larmuseau, ajhl
+ *        Company:  Distrinet, Kuleuven
+ *
+ * =====================================================================================
+ */
 
 %{
-
 open Modules
-open MiniML
-open MLTyping
+open Ruse
+open Typechecker
 
-let variables = ref ([] : (string * ML.type_variable) list)
+let variables = ref ([] : (string * RuseML.type_variable) list)
 
 let reset_type_variables () =
   variables := []
@@ -19,20 +25,25 @@ let find_type_variable name =
   try
     List.assoc name !variables
   with Not_found ->
-    let v = newvar() in
+    let v = RuseMLTyping.newvar() in
     variables := (name, v) :: !variables;
     v
 
+(* TODO fix *)
 let binop op arg1 arg2 =
-  ML.Apply(ML.Apply(ML.Longident(Pident(Ident.create op)), arg1), arg2)
+  RuseML.Apply(RuseML.Apply(RuseML.Longident(Pident(Ident.create op)), arg1), arg2)
 let ternop op arg1 arg2 arg3 =
-  ML.Apply(ML.Apply(ML.Apply(ML.Longident(Pident(Ident.create op)), arg1), arg2), arg3)
+  RuseML.Apply(RuseML.Apply(RuseML.Apply(RuseML.Longident(Pident(Ident.create op)), arg1), arg2), arg3)
 
 %}
 
 %token <string> IDENT
 %token <int> INT
 
+%token TRUE
+%token FALSE
+%token IS
+%token SI
 %token ARROW
 %token COLON
 %token COMMA
@@ -75,15 +86,20 @@ let ternop op arg1 arg2 arg3 =
 %right PLUS MINUS
 %right STAR SLASH
 
-%start adriaan
-%type <MiniML.MLMod.Core.term list> adriaan
+/* Adriaan */
+%start adriaan 
+%type <Ruse.RuseML.term list> adriaan 
+
 /*% IGNORED
 %start implementation
-%type <MiniML.MLMod.mod_term> implementation
+%type <MiniML.RuseMLMod.mod_term> implementation
+*/
+
+/*% IGNORED
 start phrase
-%type <MiniML.MLMod.definition> phrase
+%type <MiniML.RuseMLMod.definition> phrase
 %start code
-%type <MiniML.MLMod.Core.term> code */
+%type <MiniML.RuseMLMod.Core.term> code */
 %%
 
 /* Paths */
@@ -108,38 +124,39 @@ valexpr:
   | valexpr LESSEQUAL valexpr         { binop "<=" $1 $3 }
   | valexpr GREATER valexpr           { binop ">" $1 $3 }
   | valexpr GREATEREQUAL valexpr      { binop ">=" $1 $3 }
-  | FUNCTION IDENT ARROW valexpr      { ML.Function(Ident.create $2, $4) }
-  | LET IDENT valbind IN valexpr      { ML.Let(Ident.create $2, $3, $5) }
+  | FUNCTION IDENT ARROW valexpr      { RuseML.Function(Ident.create $2, $4) }
+  | LET IDENT valbind IN valexpr      { RuseML.Let(Ident.create $2, $3, $5) }
   | IF valexpr THEN valexpr ELSE valexpr { ternop "conditional" $2 $4 $6 }
+  | IS simpletype COLON valexpr      { RuseML.IS($2,$4)}
+  | SI simpletype COLON valexpr      { RuseML.SI($2,$4)}
 ;
 valexpr1:
     valexpr0 { $1 }
-  | valexpr1 valexpr0 { ML.Apply($1, $2) }
+  | valexpr1 valexpr0 { RuseML.Apply($1, $2) }
 ;
 valexpr0:
-    path { ML.Longident($1) }
-  | INT  { ML.Constant $1 }
+    path { RuseML.Longident($1) }
+  | INT  { RuseML.Constant $1 }
+  | TRUE { RuseML.Boolean true }
+  | FALSE { RuseML.Boolean false }
   | LPAREN valexpr RPAREN { $2 }
 ;
 
 
-
-
-
 valbind:
     EQUAL valexpr     { $2 }
-  | IDENT valbind     { ML.Function(Ident.create $1, $2) }
+  | IDENT valbind     { RuseML.Function(Ident.create $1, $2) }
 ;
 
 /* Type expressions for the core language */
 
 simpletype:
-    QUOTE IDENT             { ML.Var(find_type_variable $2) }
-  | simpletype ARROW simpletype { ML.Typeconstr(path_arrow, [$1; $3]) }
-  | simpletype STAR simpletype  { ML.Typeconstr(path_star, [$1; $3]) }
-  | path                    { ML.Typeconstr($1, []) }
-  | simpletype path         { ML.Typeconstr($2, [$1]) }
-  | LPAREN simpletypelist RPAREN path { ML.Typeconstr($4, List.rev $2) }
+    QUOTE IDENT             { RuseML.Var(find_type_variable $2) }
+  | simpletype ARROW simpletype { RuseML.Typeconstr(RuseMLTyping.path_arrow, [$1; $3]) }
+  | simpletype STAR simpletype  { RuseML.Typeconstr(RuseMLTyping.path_star, [$1; $3]) }
+  | path                    { RuseML.Typeconstr($1, []) }
+  | simpletype path         { RuseML.Typeconstr($2, [$1]) }
+  | LPAREN simpletypelist RPAREN path { RuseML.Typeconstr($4, List.rev $2) }
 ;
 simpletypelist:
     simpletype { [$1] }
@@ -148,21 +165,21 @@ simpletypelist:
 
 valuedecl:
     colon_begin_scheme simpletype
-            { reset_type_variables(); end_def(); generalize $2 }
+            { reset_type_variables(); RuseMLTyping.end_def(); RuseMLTyping.generalize $2 }
 ;
 colon_begin_scheme: /* Hack to perform side effects before reading the type */
-    COLON   { begin_def(); reset_type_variables() }
+    COLON   { RuseMLTyping.begin_def(); reset_type_variables() }
 ;
 
 /* Type definitions and declarations */
 
 typedecl:
-    typeparams IDENT        { ($2, {ML.arity = List.length $1}) }
+    typeparams IDENT        { ($2, {RuseML.arity = List.length $1}) }
 ;
 typedef:
     typeparams IDENT EQUAL simpletype
       { reset_type_variables();
-        ($2, {ML.arity = List.length $1}, {ML.params = $1; ML.defbody = $4}) }
+        ($2, {RuseML.arity = List.length $1}, {RuseML.params = $1; RuseML.defbody = $4}) }
 ;
 typeparams:
     /* nothing */               { [] }
@@ -178,34 +195,34 @@ typeparam:
 ;
 typeinfo:
     typedef   { let (id, kind, def) = $1 in
-                (id, {MLMod.kind = kind; MLMod.manifest = Some def})}
+                (id, {RuseMLMod.kind = kind; RuseMLMod.manifest = Some def})}
   | typedecl  { let (id, kind) = $1 in
-                (id, {MLMod.kind = kind; MLMod.manifest = None}) }
+                (id, {RuseMLMod.kind = kind; RuseMLMod.manifest = None}) }
 ;
 
 /* Value expressions for the module language */
 
 modulexpr:
-    path                              { MLMod.Longident $1 }
-  | STRUCT structure END              { MLMod.Structure(List.rev $2) }
+    path                              { RuseMLMod.Longident $1 }
+  | STRUCT structure END              { RuseMLMod.Structure(List.rev $2) }
   | FUNCTOR LPAREN IDENT COLON moduletype RPAREN modulexpr
-                                      { MLMod.Functor(Ident.create $3, $5, $7) }
-  | modulexpr LPAREN modulexpr RPAREN { MLMod.Apply($1, $3) }
+                                      { RuseMLMod.Functor(Ident.create $3, $5, $7) }
+  | modulexpr LPAREN modulexpr RPAREN { RuseMLMod.Apply($1, $3) }
   | LPAREN modulexpr RPAREN           { $2 }
-  | modulexpr COLON moduletype        { MLMod.Constraint($1, $3) }
-/*  | valexpr                           { MLMod.Expression $1 }  Adriaan */
+  | modulexpr COLON moduletype        { RuseMLMod.Constraint($1, $3) }
+/*  | valexpr                           { RuseMLMod.Expression $1 }  Adriaan */
 ;
 structure:
     /*nothing*/                       { [] }
   | structure structure_item opt_semi { $2 :: $1 }
 ;
 structure_item:
-    VALUE IDENT valbind           { MLMod.Value_str(Ident.create $2, $3) }
+    VALUE IDENT valbind           { RuseMLMod.Value_str(Ident.create $2, $3) }
   | TYPE typedef                  { let (id, kind, def) = $2 in
-                                    MLMod.Type_str(Ident.create id, kind, def) }
+                                    RuseMLMod.Type_str(Ident.create id, kind, def) }
   | MODULE IDENT COLON moduletype EQUAL modulexpr
-                     { MLMod.Module_str(Ident.create $2, MLMod.Constraint($6, $4)) }
-  | MODULE IDENT EQUAL modulexpr   { MLMod.Module_str(Ident.create $2, $4) }
+                     { RuseMLMod.Module_str(Ident.create $2, RuseMLMod.Constraint($6, $4)) }
+  | MODULE IDENT EQUAL modulexpr   { RuseMLMod.Module_str(Ident.create $2, $4) }
 ;
 opt_semi:
     /* nothing */ { () }
@@ -215,9 +232,9 @@ opt_semi:
 /* Type expressions for the module language */
 
 moduletype:
-    SIG signature END               { MLMod.Signature(List.rev $2) }
+    SIG signature END               { RuseMLMod.Signature(List.rev $2) }
   | FUNCTOR LPAREN IDENT COLON moduletype RPAREN moduletype
-                                    { MLMod.Functor_type(Ident.create $3, $5, $7) }
+                                    { RuseMLMod.Functor_type(Ident.create $3, $5, $7) }
   | LPAREN moduletype RPAREN        { $2 }
 ;
 signature:
@@ -225,16 +242,15 @@ signature:
   | signature signature_item opt_semi { $2 :: $1 }
 ;
 signature_item:
-    VALUE IDENT valuedecl             { MLMod.Value_sig(Ident.create $2, $3) }
-  | TYPE typeinfo    { let (id, def) = $2 in MLMod.Type_sig(Ident.create id, def) }
-  | MODULE IDENT COLON moduletype     { MLMod.Module_sig(Ident.create $2, $4) }
+    VALUE IDENT valuedecl             { RuseMLMod.Value_sig(Ident.create $2, $3) }
+  | TYPE typeinfo    { let (id, def) = $2 in RuseMLMod.Type_sig(Ident.create id, def) }
+  | MODULE IDENT COLON moduletype     { RuseMLMod.Module_sig(Ident.create $2, $4) }
 ;
 
 /* Toplevel entry point */
 
-/*implementation:
+implementation:
    | modulexpr EOF                     { $1 }
-;*/
 
 adriaan:
     | valexpr EOF { [$1] }

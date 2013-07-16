@@ -1,22 +1,33 @@
-(*  A modular module system.
-    The lexical analyzer for mini-ML.
-
-    Copyright 1999 Xavier Leroy.
-    This file is distributed under the GNU Public Licence. *)
+(*
+ * =====================================================================================
+ *
+ *       Filename:  lexer.mll
+ *
+ *    Description:  Ruse ML lexer based on the one by Leroy for miniML
+ *
+ *         Author:  Adriaan Larmuseau, ajhl
+ *        Company:  Distrinet, Kuleuven
+ *
+ * =====================================================================================
+ *)
 
 {
-(* Auxiliary Caml code *)
 
 exception Lexical_error of string
 
-open MiniMLparser             (* "parser" provides the type for tokens. *)
+open Parser    
 
 (* The table of keywords and infixes *)
 
 let keyword_table = (Hashtbl.create 17 : (string, token) Hashtbl.t)
 
 let _ = List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok)
- ["function", FUNCTION;
+ [
+  "is", IS;
+  "si", SI;
+  "true", TRUE;
+  "false", FALSE;
+  "function", FUNCTION;
   "fun", FUNCTION;
   "let", LET;
   "struct", STRUCT;

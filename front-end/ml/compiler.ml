@@ -190,7 +190,18 @@ struct
     *)
     let parse terms = 
         let lst = (List.map term_byte terms) in
-        let bst = ([ (emit 1) ; (emit (List.length lst))] @ lst) in
+        let bst = 
+            [   "==@@==PARSER==@@==\n";     (* first header *)
+                (emit 1) ;                  (* language == ML *)
+                (emit (List.length lst))    (* number of expressions *)
+            ]@
+                lst @                       (* insecure code *)
+            [   
+                "==@@==PARSER==@@==\n";     (* second header *)
+                "0\n"; 
+                "0\n" 
+            ] 
+        in
         (String.concat "" bst)
 
 end

@@ -162,18 +162,16 @@ function preprocess
             byte_2="/tmp/input2.byte_scm"
             $cscheme $front/scheme/genc.scm < $1  1> buildsrc/result.parser 2>/tmp/ruse_parser_log
 
-            #todo only when no file input
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
             ;;
 
         "ml") 
-			exit 1;
             language="ml"
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            #TODO implement
-            $front/ml/miniml $1 > buildsrc/input.c 2>/dev/null || { echo "Front-end failed, aborting ruse"; exit 1; }
+            $front/ml/main.native < $1  1>buildsrc/result.parser 2>/tmp/ruse_parser_log
+            awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_ml";next}{print > x;}' buildsrc/result.parser
             ;;
 
         "byte_scm") 
@@ -237,7 +235,7 @@ function compile
     cp -p cesk/*.h buildsrc
 
     # Make Ocaml front-end
-    #make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
+    make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
 
     # Make 
     make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt FPGA=$fpga  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }

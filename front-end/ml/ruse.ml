@@ -36,6 +36,8 @@ struct
     and simple_type =
         Var of type_variable                   
       | Typeconstr of path * simple_type list  
+      | BooleanType
+      | IntType
 
     and type_variable =
       { mutable repres: simple_type option;   

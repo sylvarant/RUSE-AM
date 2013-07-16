@@ -40,6 +40,9 @@ let ternop op arg1 arg2 arg3 =
 %token <string> IDENT
 %token <int> INT
 
+
+%token TINT
+%token TBOOL
 %token TRUE
 %token FALSE
 %token IS
@@ -79,6 +82,7 @@ let ternop op arg1 arg2 arg3 =
 %token THEN
 %token TYPE
 %token VALUE
+
 
 %right ARROW
 %right COMMA
@@ -154,6 +158,8 @@ simpletype:
     QUOTE IDENT             { RuseML.Var(find_type_variable $2) }
   | simpletype ARROW simpletype { RuseML.Typeconstr(RuseMLTyping.path_arrow, [$1; $3]) }
   | simpletype STAR simpletype  { RuseML.Typeconstr(RuseMLTyping.path_star, [$1; $3]) }
+  | TINT                    {RuseML.IntType}
+  | TBOOL                   {RuseML.BooleanType}
   | path                    { RuseML.Typeconstr($1, []) }
   | simpletype path         { RuseML.Typeconstr($2, [$1]) }
   | LPAREN simpletypelist RPAREN path { RuseML.Typeconstr($4, List.rev $2) }

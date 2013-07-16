@@ -150,6 +150,9 @@ struct
             (raise (Cannot_compile "List not supported yet !"))
         | Typeconstr(path, t1::tl) ->
             (raise (Cannot_compile "List not supported yet !"))
+        | BooleanType -> (emit (type_bc BTBool)) 
+        | IntType -> (emit (type_bc BTInt)) 
+        | _ -> raise (Cannot_compile "Cannot convert type")
 
 
     (*

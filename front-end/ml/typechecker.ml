@@ -73,8 +73,7 @@ struct
       | (Typeconstr(path, args), _) ->
           begin try
             scrape_types env (expand_manifest env path args) repr2
-          with Cannot_expand ->
-            (repr1, repr2)
+          with Cannot_expand -> (repr1, repr2)
           end
       | (_, Typeconstr(path, args)) ->
           begin try
@@ -143,7 +142,7 @@ struct
 
     (* Boolean type *)
     let ident_bool = Ident.create "bool"
-    let path_bool = Pident ident_int
+    let path_bool = Pident ident_bool
     let bool_type = Typeconstr(path_bool, [])
 
     (* Star type *)
@@ -157,8 +156,8 @@ struct
      * =====================================================================================
      *)
     let rec infer_type env = function
-        Constant _ -> int_type
-        | Boolean  _ -> bool_type 
+        Constant _ -> IntType
+        | Boolean  _ -> BooleanType
         | Longident path -> instance (Env.find_value path env)
         | Function(param, body) ->
             let type_param = unknown() in

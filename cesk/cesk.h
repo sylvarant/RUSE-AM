@@ -21,18 +21,18 @@
 // load insecure header
 #include "undefine.h"
 #include "insecure_macro.h"
-#include "scheme.h"
+#include "ruse.h"
 
 // load secure header
 #include "undefine.h"
 #define SECURE
 #include "secure_macro.h"
-#include "scheme.h"
+#include "ruse.h"
 
 #else
 
 // insecure does not need fancy tricks
-#include "scheme.h"
+#include "ruse.h"
 
 #endif
 

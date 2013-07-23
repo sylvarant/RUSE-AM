@@ -160,7 +160,9 @@ LOCAL VALUE convertin(OTHERVALUE ptr){
 
             default : {
                 VALUE v;
-                v.b =  makeSI(ptr.b);
+				OTHERTYPE t;
+                t.b = OTHERN(makeTIgnore)(); // TODO type	
+                v.b =  makeSI(t.b,ptr.b);
                 return v;
             }
     }
@@ -187,7 +189,9 @@ LOCAL void * convertout(VALUE in){
                 insertLabel(&(mystate->label),mystate->free_adr);
                 DEBUG_PRINT("Adding Label (A) == %d",d);
                 mystate->free_adr++;
-                return makeIS(d);
+                Type ty;
+                ty.b = N(makeTIgnore)(); // TODO type check
+                return makeIS(ty.b,d);
             }
     }
 }
@@ -313,11 +317,17 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
                 mystate->free_adr++;
                 OTHERVALUE * ls = MALLOC(2 * sizeof(OTHERVALUE));
                 ls[0].b = ptr.b;
-                ls[1].b = makeIS(c);
+                TYPE ty;
+                ty.b = N(makeTIgnore)(); // TODO typecheck
+                ls[1].b = makeIS(ty.b,c);
                 VALUE * la = MALLOC(1 * sizeof(VALUE));
                 la[0].b = N(makeSymbol)("a");
 				VALUE v; 
-				v.b = N(makeLambda)(1,makeSI(OTHERN(makeApplication)(2,ls)),la);
+                OTHERVALUE other; 
+                other.b = OTHERN(makeApplication)(2,ls);
+                OTHERTYPE oty;
+                oty.b = OTHERN(makeTIgnore)(); // TODO typecheck
+				v.b = N(makeLambda)(1,makeSI(ty.b,other.b),la);
                 return evalAtom(v);
             }
 
@@ -849,7 +859,11 @@ ENTRYPOINT void * secure_eval(int label){
                 insertLabel(&(mystate->label),c);
                 VALUE * ls = MALLOC(2 * sizeof(VALUE));
                 ls[0].b = in.b;
-                ls[1].b = makeSI(OTHERN(makeSymbol)("z"));
+                OTHERTYPE oty;          
+                oty.b = OTHERN(makeTIgnore)();
+                OTHERVALUE other;
+                other.b = OTHERN(makeSymbol)("z");
+                ls[1].b = makeSI(oty.b,other.b); // TODO typecheck
                 mystate->storage[c].b = N(makeApplication)(2,ls);
                 #ifdef DEBUG
                 char * strc = N(toString)(mystate->storage[c],0);
@@ -858,7 +872,9 @@ ENTRYPOINT void * secure_eval(int label){
                 #endif
                 OTHERVALUE * la = MALLOC(1 * sizeof(OTHERVALUE));
                 la[0].b = OTHERN(makeSymbol)("z");
-                return (OTHERN(makeLambda)(1,makeIS(c),la)); 
+                TYPE ty;
+                ty.b = N(makeTIgnore)(); // TODO typecheck
+                return (OTHERN(makeLambda)(1,makeIS(ty.b,c),la)); 
             }
 
             default : break;

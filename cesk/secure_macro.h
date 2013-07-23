@@ -64,6 +64,10 @@
 #define KONT N(Kont)
 #define OTHERKONT Kont
 
+// Secure uses SType
+#define TYPE N(Type)
+#define OTHERTYPE Type
+
 // Secure uses SLimbo
 #define LIMBO N(Limbo)
 #define OTHERLIMBO Limbo

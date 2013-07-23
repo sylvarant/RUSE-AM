@@ -5,8 +5,6 @@
 ;;; create binding for error
 (define error #f)
 
-;; call the outside
-(define outside #f)
 (define xnr 0)
 (define xxpr '())
 (define outl '())
@@ -197,15 +195,13 @@
         [`(quote ,args) (string-append (prefix in 'Quote) (lexeme args in))]
 
     ; SI
-        [`(SI ,arg)  (string-append (prefix in 'SI) (c-gener arg #f))] ;(error "Cannot cross to Insecure from Secure")  ]
+        [`(SI ,arg)  (string-append (prefix in 'SI) (number->string 0) "\n" (c-gener arg #f))] ;(error "Cannot cross to Insecure from Secure")  ]
     ; IS
         [`(IS ,arg) (begin  
-               (when (not outside) 
-                (set! outside #t)) 
                 (let ((c xnr))
                 (set! xnr (+ xnr 1))
                 (set! outl  (cons (c-gener arg #t) outl)) 
-                (string-append (prefix in 'IS) (number->string c))))] ;(error "Cannot cross to Secure from InSecure") )]
+                (string-append (prefix in 'IS) (number->string 0) "\n" (number->string c))))] ;(error "Cannot cross to Secure from InSecure") )]
 
     ; function appl
         [`(,f . ,args)

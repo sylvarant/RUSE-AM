@@ -36,6 +36,7 @@ unamestr_os=`uname`
 base=""
 bytext=""
 fpga=""
+parse_log=/tmp/ruse_parser_log
 
 
 ############################
@@ -126,10 +127,10 @@ function execute
     #logging
     if [[ $lflag -eq 1 ]]; then
         local trace=$(</tmp/ruse_log) 
-        local normalizer=$(</tmp/ruse_parser_log) 
+        local normalizer=$(<"$parse_log") 
         if [[ $# -eq 2 ]]; then
-            ./tools/bytetoc.pl  $1 > $native_1
-            ./tools/bytetoc.pl --secure $2 > $native_2
+            ./tools/bytetoc  $1 > $native_1
+            ./tools/bytetoc --secure $2 > $native_2
         fi
         log $last $trace $native_1 $native_2 $byte_1 $byte_2 $normalizer
 	else
@@ -160,7 +161,7 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
-            $cscheme $front/scheme/genc.scm < $1  1> buildsrc/result.parser 2>/tmp/ruse_parser_log
+            $cscheme $front/scheme/genc.scm < $1  1> buildsrc/result.parser 2>"$parse_log"
 
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
             ;;
@@ -170,7 +171,7 @@ function preprocess
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            $front/ml/main.native < $1  1>buildsrc/result.parser 2>/tmp/ruse_parser_log
+            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "Front-end failed with ::\n=>$(cat $parse_log)\n... aborting ruse"; exit 1; }
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_ml";next}{print > x;}' buildsrc/result.parser
             ;;
 
@@ -179,16 +180,17 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
+            echo "Parser not used" > "$parse_log"
             cp $2 $byte_1
             cp $1 $byte_2
             ;;
 
         "byte_ml")
-			exit 1;
             language="ml"
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
+            echo "Parser not used" > "$parse_log"
             cp $2 $byte_1
             cp $1 $byte_2
             ;;
@@ -330,8 +332,8 @@ if [[ $bflag -eq 1  ]]; then
     fi
     cflag=1
     byteopt=NATIVE
-    ./tools/bytetoc.pl  "$byte_1" > $tmp_native_1
-    ./tools/bytetoc.pl --secure $byte_2 > $tmp_native_2
+    ./tools/bytetoc  "$byte_1" > $tmp_native_1
+    ./tools/bytetoc --secure $byte_2 > $tmp_native_2
 fi
 
 

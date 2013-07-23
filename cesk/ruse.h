@@ -1,9 +1,9 @@
 /*
  * =====================================================================================
  *
- *       Filename:  scheme.h
+ *       Filename:  ruse.h
  *
- *    Description:  The scheme language definition
+ *    Description:  The ruse language definition
  *
  *        Created:  06/28/2013 14:46:02
  *
@@ -15,7 +15,7 @@
 
 
 // No protections double includes allowed
-#define SCHEME_INCLUDED
+#define RUSE_INCLUDED
 
 #include <stdio.h>
 
@@ -35,11 +35,14 @@
                       _SCM
 
 
+
 /*-----------------------------------------------------------------------------
- *  Tags
+ *  Tags used by RUSE
  *-----------------------------------------------------------------------------*/
 
-// language elements tags
+/*
+ * Tags for terms
+ */
 enum N(Tag) {
 
     // Trick to identify Unalocated VALUE's 
@@ -63,6 +66,19 @@ enum N(Tag) {
     #endif
 };
 
+/*
+ * Tags for types
+ */
+enum N(TTag){
+
+    // Ignore null types 
+    N(TIGNORE),
+
+    N(TUNIT), N(TINT), N(TBOOLEAN), N(TARROW), N(TSTAR)
+
+};
+
+
 // Continuationt tags
 enum N(KTag) {N(KLET),N(KRET),N(KCONTINUE)};
 
@@ -75,7 +91,20 @@ typedef union N(Kont_u){
     struct N(KLet) * l;  
     struct N(KRet) * r;
     struct N(KCont) * c;
-}KONT;
+} KONT;
+
+
+/*-----------------------------------------------------------------------------
+ * Union of Types
+ *-----------------------------------------------------------------------------*/
+typedef union N(Type_u){
+    enum   N(TTag)      tt;
+    struct N(TUnit)    * u;
+    struct N(TInt)     * i;
+    struct N(TBoolean) * b;
+    struct N(TArrow)   * a;
+    struct N(TStar)    * s;
+} TYPE;
 
 /*-----------------------------------------------------------------------------
  * Union of Descriptors
@@ -223,15 +252,46 @@ _SCM
 #ifdef SECURE
 struct SI{
     enum N(Tag) t;
+    OTHERTYPE ty; 
     OTHERVALUE arg;
 };
 #else
 struct IS{
     enum N(Tag) t;
+    TYPE ty; 
     int label;
 };
 #endif
-  
+
+
+/*-----------------------------------------------------------------------------
+ * Type Structure Definitions
+ *-----------------------------------------------------------------------------*/
+
+struct N(TUnit){
+    enum N(TTag) t;
+};
+
+struct N(TBoolean){
+    enum N(TTag) t;
+};
+
+struct N(TInt){
+    enum N(TTag) t;
+};
+
+struct N(TArrow){
+    enum N(TTag) t;
+    TYPE * left;
+    TYPE * right;
+};
+
+struct N(TStar){
+    enum N(TTag) t;
+    TYPE * left;
+    TYPE * right;
+};
+
 /*-----------------------------------------------------------------------------
  * Continuation Structure Definitions
  *-----------------------------------------------------------------------------*/
@@ -257,7 +317,7 @@ struct N(KLet){
 
 
 /*-----------------------------------------------------------------------------
- *  Functionality -> Local to scheme, entrypoints are in global.h
+ *  Functionality -> Local to ruse, entrypoints are in global.h
  *-----------------------------------------------------------------------------*/
 
 // constructors - these functions cross spm boundaries -> pass value as pointer
@@ -289,17 +349,27 @@ FUNCTIONALITY void * N(makeDefine)(void *,void *);
 FUNCTIONALITY void * N(makeContinuation)(KONT);
 FUNCTIONALITY void * N(makeClosure)(void *,BINDING*);
 
+// type constructors
+FUNCTIONALITY void * N(makeTIgnore)(void);
+FUNCTIONALITY void * N(makeTUnit)(void);
+FUNCTIONALITY void * N(makeTInt)(void);
+FUNCTIONALITY void * N(makeTBoolean)(void);
+FUNCTIONALITY void * N(makeTArrow)(void*,void*);
+FUNCTIONALITY void * N(makeTStar)(void*,void*);
+// TODO STAR type
+
+// boundary
+#ifdef SECURE
+FUNCTIONALITY void * makeSI(void *,void *);
+#else
+FUNCTIONALITY void * makeIS(void *,int);
+#endif
+
+
 // continuations
 FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
 FUNCTIONALITY KONT N(makeKCont)(BINDING*,KONT);
 FUNCTIONALITY KONT N(makeKRet)(KONT);
-
-// boundary
-#ifdef SECURE
-FUNCTIONALITY void * makeSI(void *);
-#else
-FUNCTIONALITY void * makeIS(int);
-#endif
 
 // memory duplication
 //FUNCTIONALITY void * N(copyValue)(void *);

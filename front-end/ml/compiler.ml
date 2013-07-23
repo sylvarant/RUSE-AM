@@ -74,6 +74,10 @@ struct
     (* ported from Leroy *)
     let variable_names = ref ([] : (type_variable * string) list)
 
+    (* the outer code frame *)
+    let xnr = ref 0
+    let outl = ref []
+
 
     (*
      * ===  FUNCTION  ======================================================================
@@ -169,27 +173,51 @@ struct
                | false -> 0
             in
             ((emit (term_bc BBoolean)) ^ (emit (bti b))))
-        | Longident p -> 
-            ((emit (term_bc BLongindent))^(path_str p)^"\n") 
+        | Longident p -> (let str = (path_str p) in
+            ((emit (term_bc BLongindent))^(emit (String.length str))^str^"\n")) 
         | Function(id, body) -> 
-            ((emit (term_bc BFunction)) ^ (term_byte (Longident (Pident id))) ^ (term_byte body))
+            ((emit (term_bc BFunction)) ^"1\n"^ (term_byte body)^(term_byte (Longident (Pident id))))
         | Apply(t1, t2) -> 
-            ((emit (term_bc BApply)) ^ (term_byte t1)^(term_byte t2))
+            ((emit (term_bc BApply)) ^"2\n"^ (term_byte t1)^(term_byte t2))
         | Let(id, t1, t2) -> 
             ((emit (term_bc BLet)) ^ (term_byte (Longident (Pident id)))^(term_byte t1)^(term_byte t2))
-        | IS(ty,t1) -> ((emit (term_bc BIS)) ^ (type_byte ty) ^ (term_byte t1))
+        | IS(ty,t1) ->(
+            let c = !xnr in
+            xnr := !xnr + 1;
+            outl := ((term_byte t1) :: !outl);  
+            ((emit (term_bc BIS)) ^ (type_byte ty) ^ (emit c)))
         | SI(ty,t1) -> ((emit (term_bc BSI)) ^ (type_byte ty) ^ (term_byte t1))
         | _ -> (raise (Cannot_compile "Not supported by term_byte"))
 
 
-    (* 
+   (* 
+    * ===  FUNCTION  ======================================================================
+    *         Name:    build
+    *  Description:    build the two lists produced by the byte generation
+    * =====================================================================================
+    *)
+    let rec build = function
+        | [] -> ([],[])
+        | l::ls -> 
+            let _ = outl := [] in
+            let head = (term_byte l) in
+            let (xxpr,tail) = (build ls) in  
+            (((List.rev !outl) @ xxpr),head :: tail)  
+
+
+   (* 
     * ===  FUNCTION  ======================================================================
     *         Name:    parse
     *  Description:    parse a list of expressions into a string of bytes
     * =====================================================================================
     *)
     let parse terms = 
-        let lst = (List.map term_byte terms) in
+
+        (* start from a clean slate *)
+        xnr := 0;
+    
+        (* build bye code *)
+        let (xxpr,lst) = build terms in
         let bst = 
             [   "==@@==PARSER==@@==\n";     (* first header *)
                 (emit 1) ;                  (* language == ML *)
@@ -199,7 +227,8 @@ struct
             [   
                 "==@@==PARSER==@@==\n";     (* second header *)
                 "0\n"; 
-                "0\n" 
+                (emit (List.length xxpr));
+                (String.concat "\n" (List.rev xxpr)) 
             ] 
         in
         (String.concat "" bst)

@@ -1,7 +1,7 @@
 /*
  * =====================================================================================
  *
- *       Filename:  scheme.c
+ *       Filename:  ruse.c
  *
  *    Description:  Scheme Language descriptors implementation
  *
@@ -135,11 +135,12 @@ FUNCTIONALITY void* N(makeBoolean)(unsigned int b) {
  *  Description:    create a VALUE across the boundary to the InSecure
  * =====================================================================================
  */
-FUNCTIONALITY void* makeSI(void* n) {
+FUNCTIONALITY void* makeSI(void* ty,void * n) {
     VALUE v;
     v.i = MALLOC(sizeof(struct SI));
     v.i->t = SI ;
     v.i->arg.b = n ;
+    v.i->ty.b = ty;
     return v.b;
 }
 
@@ -151,12 +152,13 @@ FUNCTIONALITY void* makeSI(void* n) {
  *  Description:    create a Value across the boundary to the Secure
  * =====================================================================================
  */
-FUNCTIONALITY void* makeIS(int n) {
+FUNCTIONALITY void* makeIS(void * ty,int n) {
     Value v;
     struct IS * data = (struct IS*) malloc(sizeof(struct IS));
     v.i = data;
     v.i->t = IS ;
     v.i->label = n ;
+    v.i->ty.b = ty;
     return v.b;
 }
 #endif

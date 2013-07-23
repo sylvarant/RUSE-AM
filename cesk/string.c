@@ -186,9 +186,9 @@ FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
             char * start = "(IS ";
             int sstart = strlen(start);
             int stringsize = 4;
-            if(par.z->value >= 1) stringsize = (nchar(par.z->value) + 4);   
+            if(par.i->label >= 1) stringsize = (nchar(par.i->label) + 4);   
             char * str = (char *) malloc(sizeof(char) * (stringsize + sstart));
-            sprintf(str,"%s%d)",start,par.z->value);
+            sprintf(str,"%s%d)",start,par.i->label);
             return str;
         }
         #endif

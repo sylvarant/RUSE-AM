@@ -29,8 +29,7 @@
 #define SINGLE(T,TYPE)     case N(T) : {\
             VALUE c;\
             c.b = N(readCode)(strbuf);\
-			result = N(make##TYPE)(c.b);\
-            break;\
+			return N(make##TYPE)(c.b);\
         }
 
 #define DOUBLE(T,TYPE)  case N(T) : {\
@@ -38,8 +37,7 @@
             VALUE b;\
             a.b = N(readCode)(strbuf);\
             b.b = N(readCode)(strbuf);\
-			result = N(make##TYPE)(a.b,b.b);\
-            break;\
+			return N(make##TYPE)(a.b,b.b);\
         }
 
 #define MULTIPLE(T,TYPE) case N(T) : {\
@@ -51,12 +49,11 @@
                 for(long i = 0; i < c; i++){\
                     ls[i].b = N(readCode)(strbuf);\
                 }\
-				result = N(make##TYPE)(c,ls);\
+				return N(make##TYPE)(c,ls);\
             }else{\
                 DEBUG_PRINT("ERROR: Expecting Argument Count");\
                 exit(1);\
             }\
-            break;\
         }
 
 #ifdef SECURE // hack
@@ -69,6 +66,7 @@ FUNCTIONALITY void * OTHERN(readCode)(char***);
  *-----------------------------------------------------------------------------*/
 LOCAL char ** split(char * a_str, const char * a_delim,int *len);
 LOCAL void freesplit(char ** a_str);
+LOCAL void * readType(char***);
 
 
 /* 
@@ -114,7 +112,7 @@ LOCAL char** split(char *str, const char *delimiter,int *len){
     for(p=text;NULL!=(p=strtok(p, delimiter));p=NULL){
         *array++=p;
     }
-    *array=NULL;
+    //*array=NULL;
     *len=c;
     return ret;
 }
@@ -126,8 +124,46 @@ LOCAL char** split(char *str, const char *delimiter,int *len){
  *  Description:    convert triple pointer to VALUE
  * =====================================================================================
  */
+FUNCTIONALITY void * readType(char *** strbuf){
+    char *end;
+    long id = strtol((*strbuf)[0], &end, 10); 
+    if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
+        (*strbuf)++;
+        switch(id){
+
+            case N(TIGNORE) : 
+                return N(makeTIgnore)();
+
+            case N(TUNIT) :
+                return N(makeTUnit)();
+            
+            case N(TBOOLEAN) :
+                return N(makeTBoolean)();
+
+            case N(TINT) :
+                return N(makeTInt)();
+
+            case N(TARROW) : {
+                TYPE left,right;
+                left.b = readType(strbuf);  
+                right.b = readType(strbuf);
+                return N(makeTArrow)(left.b,right.b);
+            }
+
+            default :
+                DEBUG_PRINT("ERROR: Unkown Identifier :: %d",id);
+                exit(1);
+        }
+    }
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    read in byte code
+ *  Description:    convert triple pointer to VALUE
+ * =====================================================================================
+ */
 FUNCTIONALITY void * N(readCode)(char *** strbuf){
-	void * result = NULL;
     char *end;
     long id = strtol((*strbuf)[0], &end, 10); 
     if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
@@ -136,27 +172,24 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
 
             case N(ERROR) :
                 DEBUG_PRINT("Error in input file !!");
-                break;
+                exit(1);
                 
             case N(VOID) : 
-                result = N(makeVoid)(); 
-                break;
+                return N(makeVoid)(); 
 
             case N(NOP) :
-                result = N(makeNop)(); 
-                break;
+                return N(makeNop)(); 
 
             case N(INT) : {
                 char *end;
                 long temp = strtol((*strbuf)[0], &end, 10); 
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
-                    result = N(makeInt)((int) temp);
+                    return N(makeInt)((int) temp);
                 }else{
                     DEBUG_PRINT("ERROR: Missing Identifier @INT.");
                     exit(1);
                 }
-                break;
             }
 
             case N(BOOLEAN) : {
@@ -164,12 +197,11 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                 long temp = strtol((*strbuf)[0], &end, 10); 
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
-				    result = N(makeBoolean)((int)temp);
+				    return N(makeBoolean)((int)temp);
                 }else{
                     DEBUG_PRINT("ERROR: Missing Identifier @ BOOLEAN.");
                     exit(1);
                 }
-                break;
             }
 
             case N(SYMBOL) : {
@@ -181,12 +213,11 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                     temp[0] ='\0'; 
                     strcat(temp,(*strbuf)[0]);
                     (*strbuf)++;
-					result = N(makeSymbol)(temp);
+					return N(makeSymbol)(temp);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting length");
                     exit(1);
                 }
-                break;
             }
 
             SINGLE(CALLCC,Callcc) 
@@ -204,8 +235,7 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                 a.b = N(readCode)(strbuf);
                 b.b = N(readCode)(strbuf);
                 c.b = N(readCode)(strbuf);
-			    result  = N(makeIf)(a.b,b.b,c.b);
-                break;
+			    return N(makeIf)(a.b,b.b,c.b);
             }
 
             case N(LET) : {
@@ -215,8 +245,7 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                 a.b = N(readCode)(strbuf);
                 b.b = N(readCode)(strbuf);
                 c.b = N(readCode)(strbuf);
-			    result = N(makeLet)(a.b,b.b,c.b);
-                break;
+			    return N(makeLet)(a.b,b.b,c.b);
             }
 
             DOUBLE(SET,Set)
@@ -234,12 +263,11 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                     for(int i = 0; i < c; i++){
                         ls[i].b = N(readCode)(strbuf);
                     }
-                    result = N(makeLambda)(c,body.b,ls);
+                    return N(makeLambda)(c,body.b,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
                 }
-                break;
             }
 
             MULTIPLE(APPLICATION,Application) 
@@ -257,13 +285,11 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                             VALUE b; 
                             a.b = N(readCode)(strbuf);
                             b.b = N(readCode)(strbuf);
-                            result = N(makePair)(a.b,b.b);
-                            break;
+                            return N(makePair)(a.b,b.b);
                         }
 
                         case 0 : {
-                            result = N(makeNIL)();
-                            break;
+                            return N(makeNIL)();
                         }
 
                         default : {
@@ -271,7 +297,7 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                             for(int i = 0; i < c; i++){
                                 ls[i].b = N(readCode)(strbuf);
                             }
-                            result = N(makeList)(c,ls);
+                            return N(makeList)(c,ls);
                         }
 
                     }
@@ -290,7 +316,7 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                     for(int i = 0; i < 2*c; i++){
                         ls[i].b = N(readCode)(strbuf);
                     }
-                    result = N(makeLetrec)(c,body.b,ls);
+                    return N(makeLetrec)(c,body.b,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
@@ -319,7 +345,7 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                     for(int i = 0; i < c; i++){
                         ls[i].b = N(readCode)(strbuf);
                     }
-                    result = N(makePrim)(c,ref,ls);
+                    return N(makePrim)(c,ref,ls);
                 }else{
                     DEBUG_PRINT("ERROR: Expecting Argument Count");
                     exit(1);
@@ -329,24 +355,26 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
 
             #ifdef SECURE 
             case SI : {
+                TYPE t;  
                 OTHERVALUE v; 
-                v.b    = OTHERN(readCode)(strbuf); // TODO leak :: passing out memory to the other side !!
-                result = makeSI(v.b);
-                break;
+                t.b = readType(strbuf);
+                v.b    = OTHERN(readCode)(strbuf); // TODO leak::memory to otherside
+                return makeSI(t.b,v.b);
             }
 
             #else
             case IS : { 
                 char *end;
+                Type t;
+                t.b = readType(strbuf);
                 long temp = strtol((*strbuf)[0], &end, 10); 
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
-                    result = makeIS((int)temp);
+                    return makeIS(t.b,(int)temp);
                 }else{
                     DEBUG_PRINT("ERROR: Missing Identifier @INT.");
                     exit(1);
                 }
-                break;
             }
 
             #endif
@@ -358,8 +386,6 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
         DEBUG_PRINT("ERROR: Missing Identifier @ fscan");
         exit(1);
     }
-
-    return result;
 }
 
 
@@ -381,8 +407,8 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
     long lang = strtol(list[0], &end, 10); 
     if (!(end == list[0] || *end != '\0' || errno == ERANGE)){
 
-        // TODO improve
-        if(lang > 0){
+        // TODO no better solution ?
+        if(lang < SCHEME && lang > ML ){ 
 		    DEBUG_PRINT("Language not supported yet :: %d",lang);
         }
 
@@ -392,7 +418,7 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
         if (!(end == list[1] || *end2 != '\0' || errno == ERANGE)){
 
             *line_n = (int) lines;
-		    DEBUG_PRINT("Scheme Program -- Expecting %d lines",*line_n);
+		    DEBUG_PRINT("Program -- Expecting %d lines", *line_n);
 		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
             list +=2;
 		    for(int i = 0; i < *line_n ; i++){

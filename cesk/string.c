@@ -23,7 +23,7 @@
 #endif
 
 #ifdef SECURE // hack
-FUNCTIONALITY char * OTHERN(toString)(OTHERVALUE,unsigned int);
+HOOK char * OTHERN(toString)(OTHERVALUE,unsigned int);
 #endif
 
 /*-----------------------------------------------------------------------------

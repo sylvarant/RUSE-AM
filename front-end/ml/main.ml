@@ -84,6 +84,7 @@ let main() =
     MLPrint.print_modtype mty; *)
 
     let prog = Parser.adriaan Lexer.token lexbuf in
+(*    RuseMLTyping.type_prog !init_env prog; *)
     (print_string (ByteCompiler.parse prog));
     Format.print_newline();
     exit 0

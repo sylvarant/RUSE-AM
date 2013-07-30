@@ -63,7 +63,7 @@ SANSECURE= $(SOURCE:.c=.san_o_S)
 
 
 #============================================
-# Compiling objects
+# Compiling Objects
 #============================================
 
 %.o: %.c

@@ -57,7 +57,7 @@
         }
 
 #ifdef SECURE // hack
-FUNCTIONALITY void * OTHERN(readCode)(char***);
+HOOK void * OTHERN(readCode)(char***);
 #endif
 
 

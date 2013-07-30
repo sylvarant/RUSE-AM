@@ -117,6 +117,8 @@ struct
             if v.level > !current_level & not (List.memq v vars)
             then v :: vars
             else vars
+        | BooleanType -> vars
+        | IntType -> vars
         | Typeconstr(path, tl) ->
             List.fold_left gen_vars vars tl in
       { quantif = gen_vars [] ty; body = ty }
@@ -205,6 +207,10 @@ struct
       let ty = infer_type env term in
       end_def();
       generalize ty
+
+    let rec type_prog env = function 
+        | [a] -> (type_term env a)
+        | x :: xs -> (type_term env x); (type_prog env xs)
 
     let valtype_match env vty1 vty2 =
       let rec filter ty1 ty2 =

@@ -88,3 +88,32 @@ FUNCTIONALITY void * N(makeTArrow)(void * l,void * r){
     return t.a; 
 }
 
+#ifdef SECURE
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    N(typecheck)
+ *  Description:    typechecks Secure Values
+ * =====================================================================================
+ */
+FUNCTIONALITY void * N(typecheck)(void * l){
+    VALUE t;
+    
+    t.b = l;
+    return NULL; 
+}
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    OTHERN(typecheck)
+ *  Description:    typechecks insecure Values
+ * =====================================================================================
+ */
+FUNCTIONALITY void * OTHERN(typecheck)(void * l){
+    OTHERVALUE t;
+
+    return NULL; 
+}
+
+#endif

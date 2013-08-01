@@ -32,6 +32,7 @@ tmp_native_1="/tmp/input1.c"
 tmp_native_2="/tmp/input2.c"
 native_1="buildsrc/input1.c"
 native_2="buildsrc/input2.c"
+ml_complog="/tmp/ml_front_end_compilation_log"
 unamestr_os=`uname`
 base=""
 bytext=""
@@ -161,7 +162,7 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
-            $cscheme $front/scheme/genc.scm < $1  1> buildsrc/result.parser 2>"$parse_log"
+            $cscheme $front/scheme/main.scm < $1  1> buildsrc/result.parser 2>"$parse_log"
 
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
             ;;
@@ -171,7 +172,7 @@ function preprocess
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "Front-end failed with ::\n=>$(cat $parse_log)\n... aborting ruse"; exit 1; }
+            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "Front-end failed to parse ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_ml";next}{print > x;}' buildsrc/result.parser
             ;;
 
@@ -237,7 +238,7 @@ function compile
     cp -p cesk/*.h buildsrc
 
     # Make Ocaml front-end
-    make -s --directory=$front/ml/ >/dev/null 2>&1 || { echo "Front-end compilation, aborting ruse"; exit 1; }
+    make --directory=$front/ml/  1>"$ml_complog" 2>&1 || { echo -e "Front-end compilation failed ::\n$(cat $ml_complog)\nAborting ruse"; exit 1; }
 
     # Make 
     make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt FPGA=$fpga  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }

@@ -29,7 +29,11 @@ let find_type_variable name =
     variables := (name, v) :: !variables;
     v
 
-(* TODO fix *)
+(* create list form two arguments *)
+let prim_ls arg1 arg2 = arg1 :: arg2 :: []
+
+
+(* TODO remove *)
 let binop op arg1 arg2 =
   RuseML.Apply(RuseML.Apply(RuseML.Longident(Pident(Ident.create op)), arg1), arg2)
 let ternop op arg1 arg2 arg3 =
@@ -117,20 +121,21 @@ path:
 
 valexpr:
     valexpr1                          { $1 }
-  | valexpr COMMA valexpr             { binop "," $1 $3 }
-  | valexpr PLUS valexpr              { binop "+" $1 $3 }
-  | valexpr MINUS valexpr             { binop "-" $1 $3 }
-  | valexpr STAR valexpr              { binop "*" $1 $3 }
-  | valexpr SLASH valexpr             { binop "/" $1 $3 }
-  | valexpr EQUALEQUAL valexpr        { binop "==" $1 $3 }
+/* %TODO what is this ?  | valexpr COMMA valexpr             { binop "," $1 $3 }*/
+  | valexpr PLUS valexpr              { RuseML.Prim( "+",(prim_ls $1 $3)) }
+  | valexpr MINUS valexpr             { RuseML.Prim( "-",(prim_ls $1 $3)) }
+  | valexpr STAR valexpr              { RuseML.Prim( "*",(prim_ls $1 $3)) }
+  | valexpr EQUALEQUAL valexpr        { RuseML.Prim( "=",(prim_ls $1 $3)) }
+/* TODO add  | valexpr SLASH valexpr             { binop "/" $1 $3 }
   | valexpr LESSGREATER valexpr       { binop "<>" $1 $3 }
   | valexpr LESS valexpr              { binop "<" $1 $3 }
   | valexpr LESSEQUAL valexpr         { binop "<=" $1 $3 }
   | valexpr GREATER valexpr           { binop ">" $1 $3 }
-  | valexpr GREATEREQUAL valexpr      { binop ">=" $1 $3 }
-  | FUNCTION IDENT ARROW valexpr      { RuseML.Function(Ident.create $2, $4) }
+  | valexpr GREATEREQUAL valexpr      { binop ">=" $1 $3 } */
+/*  | FUNCTION IDENT COLON simpletype ARROW valexpr {RuseML.Function(Ident.create $2,$3 $5) } */
+  | FUNCTION IDENT ARROW valexpr {RuseML.Function(Ident.create $2, $4) } 
   | LET IDENT valbind IN valexpr      { RuseML.Let(Ident.create $2, $3, $5) }
-  | IF valexpr THEN valexpr ELSE valexpr { ternop "conditional" $2 $4 $6 }
+  | IF valexpr THEN valexpr ELSE valexpr { RuseML.If( $2, $4, $6) }
   | IS simpletype COLON valexpr      { RuseML.IS($2,$4)}
   | SI simpletype COLON valexpr      { RuseML.SI($2,$4)}
 ;

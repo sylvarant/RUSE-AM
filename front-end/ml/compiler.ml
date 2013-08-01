@@ -39,6 +39,8 @@ struct
         | BFunction
         | BApply
         | BLet
+        | BPrim
+        | BIf
         | BIS
         | BSI
 
@@ -54,7 +56,9 @@ struct
     [
         BConstant,      3;
         BBoolean,       4;
+        BPrim,           9;
         BFunction,      10;
+        BIf,             11;
         BLongindent,    12;
         BApply,         13;
         BLet,           16;
@@ -176,11 +180,15 @@ struct
         | Longident p -> (let str = (path_str p) in
             ((emit (term_bc BLongindent))^(emit (String.length str))^str^"\n")) 
         | Function(id, body) -> 
-            ((emit (term_bc BFunction)) ^"1\n"^ (term_byte body)^(term_byte (Longident (Pident id))))
+            ((emit (term_bc BFunction)) ^"1\n"^ (term_byte body)^(term_byte (Longident (Pident id)))) (*^(type_byte ty))*)
         | Apply(t1, t2) -> 
             ((emit (term_bc BApply)) ^"2\n"^ (term_byte t1)^(term_byte t2))
         | Let(id, t1, t2) -> 
             ((emit (term_bc BLet)) ^ (term_byte (Longident (Pident id)))^(term_byte t1)^(term_byte t2))
+        | Prim(c,ls) -> 
+            ((emit (term_bc BPrim))  ^(c^"\n")^(String.concat "\n" (List.map term_byte ls))^"\n")
+        | If(t1,t2,t3) -> 
+            ((emit (term_bc BIf))^(term_byte t1)^(term_byte t2)^(term_byte t3))
         | IS(ty,t1) ->(
             let c = !xnr in
             xnr := !xnr + 1;

@@ -161,7 +161,7 @@ struct
         Constant _ -> IntType
         | Boolean  _ -> BooleanType
         | Longident path -> instance (Env.find_value path env)
-        | Function(param, body) ->
+        | Function(param,body) ->
             let type_param = unknown() in
             let type_body =
             infer_type (Env.add_value param (trivial_scheme type_param) env) body in

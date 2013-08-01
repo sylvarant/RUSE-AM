@@ -98,8 +98,32 @@ FUNCTIONALITY void * N(makeTArrow)(void * l,void * r){
  */
 FUNCTIONALITY void * N(typecheck)(void * l){
     VALUE t;
-    
     t.b = l;
+
+    switch(t.b->t){
+
+        case N(BOOLEAN) :
+         
+        case N(INT) :
+
+        case N(IF) :
+
+        case N(SYMBOL) :
+
+        case N(CLOSURE) :
+
+        case N(LIST) :
+
+        case N(PRIM) : 
+
+        case N(APPLICATION) :
+
+        case N(LET) :
+
+        default : // untyped !!
+        
+    }
+
     return NULL; 
 }
 

@@ -26,11 +26,14 @@ struct
         Constant of int                        
       | Boolean of bool                      
       | Longident of path                     
-      | Function of Ident.t * term          
+(*      | Function of Ident.t * simple_type * term *)        
+      | Function of Ident.t * term
       | Apply of term * term               
+      | If of term * term * term
       | Let of Ident.t * term * term      
       | IS of simple_type * term                       
       | SI of simple_type * term                      
+      | Prim of string * (term list)
 
     (* Type system *) 
     and simple_type =

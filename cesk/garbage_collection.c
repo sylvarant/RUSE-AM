@@ -80,7 +80,7 @@ FUNCTIONALITY void N(freeValue)(VALUE par){
     switch(par.tt){
 
         case N(NOP):
-        case N(VOID):
+        case N(UNIT):
             return;
 
         default : break;

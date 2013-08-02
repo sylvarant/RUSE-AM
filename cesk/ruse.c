@@ -116,15 +116,11 @@ FUNCTIONALITY void* N(makeInt)(int n) {
  * =====================================================================================
  */
 FUNCTIONALITY void* N(makeBoolean)(unsigned int b) {
+    static struct N(Boolean) datatrue  = {N(BOOLEAN),N(RTRUE)};
+    static struct N(Boolean) datafalse = {N(BOOLEAN),N(RFALSE)};
 
-    // TODO this optimization should be more visible
-    static struct N(Boolean) datatrue  = {N(BOOLEAN),1};
-    static struct N(Boolean) datafalse = {N(BOOLEAN),0};
-
-    VALUE v ;
-    if(b){ v.b = &datatrue;}
-    else{ v.b = &datafalse;}
-    return v.b;
+    if(b){ return &datatrue;}
+    else{ return &datafalse;}
 }
 
 #ifdef SECURE
@@ -343,10 +339,9 @@ FUNCTIONALITY void* N(makeContinuation)(KONT kstar){
  *  Description:    create a simple void statement
  * =====================================================================================
  */
-FUNCTIONALITY void* N(makeVoid)(void){
-    VALUE val;
-    val.tt = N(VOID);
-    return val.b;
+FUNCTIONALITY void* N(makeUnit)(void){
+    static enum N(Tag) unit_term = N(UNIT);
+    return &unit_term;
 }
 
 
@@ -357,9 +352,8 @@ FUNCTIONALITY void* N(makeVoid)(void){
  * =====================================================================================
  */
 FUNCTIONALITY void* N(makeNop)(void){
-    VALUE val;
-    val.tt = N(NOP);
-    return val.b;
+    static enum N(Tag) nop_term = N(NOP);
+    return &nop_term;
 }
 
 
@@ -520,7 +514,7 @@ FUNCTIONALITY void* N(makeDefine)(void* v,void* v2){
 
         case N(NOP) :
             return N(makeNop());
-        case N(VOID) : 
+        case N(UNIT) : 
             return N(makeVoid)(); 
 
         default : break;

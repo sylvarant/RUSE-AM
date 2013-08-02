@@ -48,6 +48,11 @@ LOCAL LIMBO applyKont(VALUE val,N(Kont) k);
 LOCAL VALUE evalAtom(VALUE atom);
 LOCAL unsigned int isAtom(VALUE atom);
 
+#ifdef SECURE
+LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal);
+LOCAL void * convertout(VALUE in);
+#endif
+
 
 /*-----------------------------------------------------------------------------
  *  File Members
@@ -129,7 +134,7 @@ LOCAL unsigned int isAtom(VALUE el)
                                 IS
                             #endif
                         };
-    if(el.tt == N(VOID) || el.tt == N(NOP)) return 1;
+    if(el.tt == N(UNIT) || el.tt == N(NOP)) return 1;
     for(unsigned int i = 0; i < NELEMS(atoms); i++){ 
         if(el.b->t == atoms[i]){return 1;}
     }
@@ -143,26 +148,53 @@ LOCAL unsigned int isAtom(VALUE el)
  *  Description:    convert the low level values into secure
  * =====================================================================================
  */
-LOCAL VALUE convertin(OTHERVALUE ptr){
+LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal){
+
     switch(ptr.b->t){
 
-            case OTHERN(BOOLEAN) : {
-				VALUE v;
-				v.b =  N(makeBoolean)(ptr.b->value);
-                return v;
-            }
+        case OTHERN(BOOLEAN) : {
 
-            case OTHERN(INT) : { 
-				VALUE v;
-				v.b = N(makeInt)(ptr.b->value);
+            // check value
+            if(ptr.b->value == RFALSE || ptr.b->value == RTRUE){
+
+                // check type
+                if(N(checkType)(ptr,goal)){
+
+                    // build value
+			        VALUE v;
+				    v.b =  N(makeBoolean)(ptr.b->value);
+                    return v;
+                }
+            }
+            DEBUG_PRINT("Boolean conversion failed");
+            exit(1);
+        }
+
+        case OTHERN(INT) : { 
+            if(N(checkType)(ptr,goal)){
+
+                // value check is simply done by taking bytes
+			    VALUE v;
+			    v.b = N(makeInt)(ptr.z->value);
                 return v;          
 			}
+            DEBUG_PRINT("Int conversion failed");
+            exit(1);
+        }
 
-            default : {
+        case OTHERN(UNIT) : {
+            if(N(checkType)(ptr,goal)){
                 VALUE v;
-				OTHERTYPE t;
-                t.b = OTHERN(makeTIgnore)(); // TODO type	
-                v.b =  makeSI(t.b,ptr.b);
+                v.b = makeUnit();
+                return v;
+            }
+            DEBUG_PRINT("Unit conversion failed");
+            exit(1);
+        }
+
+        default : {
+                VALUE v;
+                v.b =  makeSI(goal.b,ptr.b);
                 return v;
             }
     }
@@ -211,7 +243,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
     switch(atom.tt){
         
         case N(NOP):
-        case N(VOID) :
+        case N(UNIT) :
             return atom;
 
         default : break;
@@ -278,9 +310,8 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         ptr.b = evaluate((atom.i->arg.b)); 
 
         // No Heap
-        if(ptr.tt == OTHERN(VOID)){
-            VALUE empty = {0};
-            return empty;
+        if(ptr.tt == OTHERN(UNIT)){
+            return convertin(ptr,atom.i->ty);
         }
 
         // Descriptors
@@ -289,14 +320,14 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             case OTHERN(INT) : 
             case OTHERN(BOOLEAN) :
             case OTHERN(QUOTE) :
-                return convertin(ptr);
+                return convertin(ptr,atom.i->ty);
 
             case OTHERN(LIST) :{
                 VALUE v;
 
                 VALUE * list = MALLOC(ptr.ls->nargs * (sizeof(VALUE))); 
                 for(int i =0; i < ptr.ls->nargs; i++){
-                   list[i] = convertin((ptr.ls->args[i]));   
+                   list[i] = convertin((ptr.ls->args[i]),atom.i->ty);// TODO fix
                 }
 
                 struct N(List) * data = MALLOC(sizeof(struct N(List)));
@@ -310,24 +341,30 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
             }
          
             case OTHERN(CLOSURE) : {
+
+                // We have to check t1->t2
+                struct N(TArrow) ty; 
+                
+                // introduce the variable 'a 
+                VALUE * la = MALLOC(1 * sizeof(VALUE));
+                la[0].b = N(makeSymbol)("a");
+                
+                // add it to the storage at position c
                 int c = mystate->free_adr;
-                mystate->storage[mystate->free_adr].b = N(makeSymbol)("a");
+                mystate->storage[mystate->free_adr].b = la[0].b;
                 insertLabel(&(mystate->label),mystate->free_adr);
                 DEBUG_PRINT("Adding Label (A) == %d",c);
                 mystate->free_adr++;
+
+                // apply closure to IS 'a     
                 OTHERVALUE * ls = MALLOC(2 * sizeof(OTHERVALUE));
                 ls[0].b = ptr.b;
-                TYPE ty;
-                ty.b = N(makeTIgnore)(); // TODO typecheck
-                ls[1].b = makeIS(ty.b,c);
-                VALUE * la = MALLOC(1 * sizeof(VALUE));
-                la[0].b = N(makeSymbol)("a");
+                ls[1].b = makeIS(ty.left.b,c);
+                void * appl = OTHERN(makeApplication)(2,ls);
+
+                // λ 'a. SI t2 : (ptr.b (IS t1 : 'a))
 				VALUE v; 
-                OTHERVALUE other; 
-                other.b = OTHERN(makeApplication)(2,ls);
-                OTHERTYPE oty;
-                oty.b = OTHERN(makeTIgnore)(); // TODO typecheck
-				v.b = N(makeLambda)(1,makeSI(ty.b,other.b),la);
+				v.b = N(makeLambda)(1,makeSI(ty.right.b,appl),la);
                 return evalAtom(v);
             }
 
@@ -502,7 +539,7 @@ LOCAL LIMBO step()
         case N(IF) : {
             VALUE condi = evalAtom(mystate->control.f->cond);	
 
-		    if(condi.b->value == 1){
+		    if(condi.b->value == N(RTRUE)){
 			    mystate->control = (mystate->control.f->cons);
 		    }else{
 			    mystate->control = (mystate->control.f->alt);;	
@@ -819,8 +856,8 @@ ENTRYPOINT void * secure_eval(int label){
 
         // No Heap
         switch(in.tt){
-            case N(VOID) :
-                return OTHERN(makeVoid)();
+            case N(UNIT) :
+                return OTHERN(makeUnit)();
             case N(NOP) :
                 return OTHERN(makeNop)();
 

@@ -34,7 +34,10 @@
                       MEM(N) \
                       _SCM
 
-
+/*-----------------------------------------------------------------------------
+ * Base Types 
+ *-----------------------------------------------------------------------------*/
+enum{N(RFALSE) = 0, N(RTRUE) =1};
 
 /*-----------------------------------------------------------------------------
  *  Tags used by RUSE
@@ -52,7 +55,7 @@ enum N(Tag) {
     N(NOP),
 
     // values
-    N(VOID), N(INT), N(BOOLEAN), N(CLOSURE),  N(LIST), N(QUOTE), 
+    N(UNIT), N(INT), N(BOOLEAN), N(CLOSURE),  N(LIST), N(QUOTE), 
 
     // Computation
     N(CONTINUATION), N(PRIM), N(LAM), N(IF), N(SYMBOL), N(APPLICATION), N(CALLCC), N(SET), 
@@ -282,14 +285,14 @@ struct N(TInt){
 
 struct N(TArrow){
     enum N(TTag) t;
-    TYPE * left;
-    TYPE * right;
+    TYPE left;
+    TYPE right;
 };
 
 struct N(TStar){
     enum N(TTag) t;
-    TYPE * left;
-    TYPE * right;
+    TYPE left;
+    TYPE right;
 };
 
 /*-----------------------------------------------------------------------------
@@ -332,7 +335,7 @@ FUNCTIONALITY void * N(makeCallcc)(void *);
 FUNCTIONALITY void * N(makeSet)(void *,void *);
 FUNCTIONALITY void * N(makeLet)(void *,void *,void *);
 FUNCTIONALITY void * N(makeLetrec)(int,void *,VALUE*);
-FUNCTIONALITY void * N(makeVoid)(void);
+FUNCTIONALITY void * N(makeUnit)(void);
 FUNCTIONALITY void * N(makeNop)(void);
 FUNCTIONALITY void * N(makeBegin)(int,VALUE*);
 FUNCTIONALITY void * N(makeCar)(void *);

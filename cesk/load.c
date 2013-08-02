@@ -124,7 +124,7 @@ LOCAL char** split(char *str, const char *delimiter,int *len){
  *  Description:    convert triple pointer to VALUE
  * =====================================================================================
  */
-FUNCTIONALITY void * readType(char *** strbuf){
+LOCAL void * readType(char *** strbuf){
     char *end;
     long id = strtol((*strbuf)[0], &end, 10); 
     if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
@@ -132,22 +132,22 @@ FUNCTIONALITY void * readType(char *** strbuf){
         switch(id){
 
             case N(TIGNORE) : 
-                return N(makeTIgnore)();
+                return OTHERN(makeTIgnore)();
 
             case N(TUNIT) :
-                return N(makeTUnit)();
+                return OTHERN(makeTUnit)();
             
             case N(TBOOLEAN) :
-                return N(makeTBoolean)();
+                return OTHERN(makeTBoolean)();
 
             case N(TINT) :
-                return N(makeTInt)();
+                return OTHERN(makeTInt)();
 
             case N(TARROW) : {
                 TYPE left,right;
                 left.b = readType(strbuf);  
                 right.b = readType(strbuf);
-                return N(makeTArrow)(left.b,right.b);
+                return OTHERN(makeTArrow)(left.b,right.b);
             }
 
             default :
@@ -174,8 +174,8 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
                 DEBUG_PRINT("Error in input file !!");
                 exit(1);
                 
-            case N(VOID) : 
-                return N(makeVoid)(); 
+            case N(UNIT) : 
+                return N(makeUnit)(); 
 
             case N(NOP) :
                 return N(makeNop)(); 

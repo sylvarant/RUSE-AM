@@ -23,8 +23,7 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY void * N(typecheck)(void *);
-FUNCTIONALITY void * OTHERN(typecheck)(void *);
+FUNCTIONALITY int N(checkType)(OTHERVALUE,OTHERTYPE);
 
 #endif
 #endif

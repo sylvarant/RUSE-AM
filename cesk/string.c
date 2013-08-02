@@ -138,7 +138,7 @@ FUNCTIONALITY char * N(toString) (VALUE par,unsigned int outer){
             return str;
         }
     
-        case N(VOID) : {
+        case N(UNIT) : {
             char * str = MALLOC(5 * sizeof(char));
             str[0] = '\0';
             strcat(str,"void");

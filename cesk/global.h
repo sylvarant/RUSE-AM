@@ -3,7 +3,9 @@
  *
  *       Filename:  global.h
  *
- *    Description: global header file
+ *    Description:  global header file
+ *                  These definitions are not to be duplicated accross the
+ *                  boundary
  *
  *         Author:  Adriaan Larmuseau, ajhl
  *        Company:  Distrinet, Kuleuven
@@ -11,16 +13,12 @@
  * =====================================================================================
  */
 
+
 #ifndef GLOBAL_INCLUDED
 #define GLOBAL_INCLUDED
 
 #include <stdlib.h> // TODO remove duplicates
-
-#ifdef SECURE
-#include "secure_macro.h"
-#else
-#include "insecure_macro.h"
-#endif
+#include "spm.h"
 
 /*-----------------------------------------------------------------------------
  *  DEBUGGING
@@ -52,12 +50,5 @@ ENTRYPOINT void sload (char *);
  *  InSecure Hooks 
  *-----------------------------------------------------------------------------*/
 HOOK void * evaluate(void *); 
-
-/*-----------------------------------------------------------------------------
- *  BUILT in input
- *-----------------------------------------------------------------------------*/
-#ifndef BYTE // uselesss ?
-HOOK char N(input_byte)[];
-#endif
 
 #endif

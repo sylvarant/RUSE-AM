@@ -26,17 +26,6 @@
 #define LOCAL static
 #define SECRET_DATA static
 #define FUNCTIONALITY extern
-#define HOOK extern
-
-
-// Entry point is sacred
-#ifdef SANCUS_SPM
-    #define ENTRYPOINT SM_ENTRY(SPM_NAME) extern
-#else
-
-#define ENTRYPOINT extern
-
-#endif
 
 
 /*-----------------------------------------------------------------------------

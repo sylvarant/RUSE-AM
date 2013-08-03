@@ -4,6 +4,7 @@
  *       Filename:  ruse.h
  *
  *    Description:  The ruse language definition
+ *                  Everyhting here is to be duplicated
  *
  *        Created:  06/28/2013 14:46:02
  *
@@ -15,11 +16,12 @@
 
 
 // No protections double includes allowed
+#ifndef RUSE_INCLUDED
 #define RUSE_INCLUDED
 
 #include <stdio.h>
 
-#include "binding.h" // adds global !
+#include "binding.h" // adds global.h !
 
 /*-----------------------------------------------------------------------------
  *  Preprocessing
@@ -35,12 +37,21 @@
                       _SCM
 
 /*-----------------------------------------------------------------------------
- * Base Types 
+ *  Global variables
  *-----------------------------------------------------------------------------*/
-enum{N(RFALSE) = 0, N(RTRUE) =1};
+
+enum LANGUAGE N(language);
+
 
 /*-----------------------------------------------------------------------------
- *  Tags used by RUSE
+ * Base Types 
+ *-----------------------------------------------------------------------------*/
+
+enum{N(RFALSE) = 0, N(RTRUE) =1};
+
+
+/*-----------------------------------------------------------------------------
+ *  Tags used by RUSE terms and types
  *-----------------------------------------------------------------------------*/
 
 /*
@@ -81,9 +92,9 @@ enum N(TTag){
 
 };
 
-
 // Continuationt tags
 enum N(KTag) {N(KLET),N(KRET),N(KCONTINUE)};
+
 
 /*-----------------------------------------------------------------------------
  * A Union of Continuations to save space
@@ -100,14 +111,14 @@ typedef union N(Kont_u){
 /*-----------------------------------------------------------------------------
  * Union of Types
  *-----------------------------------------------------------------------------*/
+
 typedef union N(Type_u){
-    enum   N(TTag)      tt;
-    struct N(TUnit)    * u;
-    struct N(TInt)     * i;
-    struct N(TBoolean) * b;
-    struct N(TArrow)   * a;
-    struct N(TStar)    * s;
+    enum   N(TTag) tt;
+    struct N(TArrow) * a;
+    struct N(TStar)  * s;
+    void * byte;         
 } TYPE;
+
 
 /*-----------------------------------------------------------------------------
  * Union of Descriptors
@@ -148,6 +159,7 @@ typedef union N(Value_u) {
 
 // Type of Primitive operation
 typedef void* (* N(PrimOp)) (void*,void*);
+
 
 /*-----------------------------------------------------------------------------
  * Descriptors
@@ -255,7 +267,7 @@ _SCM
 #ifdef SECURE
 struct SI{
     enum N(Tag) t;
-    OTHERTYPE ty; 
+    TYPE ty; 
     OTHERVALUE arg;
 };
 #else
@@ -271,18 +283,6 @@ struct IS{
  * Type Structure Definitions
  *-----------------------------------------------------------------------------*/
 
-struct N(TUnit){
-    enum N(TTag) t;
-};
-
-struct N(TBoolean){
-    enum N(TTag) t;
-};
-
-struct N(TInt){
-    enum N(TTag) t;
-};
-
 struct N(TArrow){
     enum N(TTag) t;
     TYPE left;
@@ -294,6 +294,7 @@ struct N(TStar){
     TYPE left;
     TYPE right;
 };
+
 
 /*-----------------------------------------------------------------------------
  * Continuation Structure Definitions
@@ -368,14 +369,10 @@ FUNCTIONALITY void * makeSI(void *,void *);
 FUNCTIONALITY void * makeIS(void *,int);
 #endif
 
-
 // continuations
 FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
 FUNCTIONALITY KONT N(makeKCont)(BINDING*,KONT);
 FUNCTIONALITY KONT N(makeKRet)(KONT);
-
-// memory duplication
-//FUNCTIONALITY void * N(copyValue)(void *);
 
 // math TODO probably not language specific
 FUNCTIONALITY void* N(sumPrim)(void*,void*);
@@ -383,3 +380,9 @@ FUNCTIONALITY void* N(differencePrim)(void*,void*);
 FUNCTIONALITY void* N(productPrim)(void*,void*);
 FUNCTIONALITY void* N(numequalPrim)(void*,void*);
 
+// input
+#ifndef BYTE // uselesss ?
+FUNCTIONALITY char N(input_byte)[];
+#endif
+
+#endif

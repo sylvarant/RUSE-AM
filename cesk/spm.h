@@ -30,6 +30,17 @@
 
     extern struct SancusModule secure_vm;
 
-#endif
+    // Entry point is sacred
+    #define ENTRYPOINT SM_ENTRY(SPM_NAME) extern
+
+#else
+    
+    #define ENTRYPOINT extern
 
 #endif
+
+// An entrypoints counter part
+#define HOOK extern
+
+#endif
+

@@ -23,7 +23,7 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY int N(checkType)(OTHERVALUE,OTHERTYPE);
+FUNCTIONALITY int N(checkType)(OTHERVALUE,TYPE);
 
 #endif
 #endif

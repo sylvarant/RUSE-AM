@@ -13,12 +13,11 @@
  * =====================================================================================
  */
 
+// Names
 #undef SECURE
 #undef LOCAL 
 #undef SECRET_DATA 
 #undef FUNCTIONALITY 
-#undef ENTRYPOINT 
-#undef HOOK 
 #undef N(NAME) 
 #undef OTHERN(NAME) 
 #undef VALUE 
@@ -33,3 +32,7 @@
 #undef OTHERSTATE 
 #undef MALLOC 
 #undef OTHERMALLOC 
+
+// Headers
+#undef ENVIRONMENT_INCLUDED
+#undef RUSE_INCLUDED

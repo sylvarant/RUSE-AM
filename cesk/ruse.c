@@ -136,7 +136,7 @@ FUNCTIONALITY void* makeSI(void* ty,void * n) {
     v.i = MALLOC(sizeof(struct SI));
     v.i->t = SI ;
     v.i->arg.b = n ;
-    v.i->ty.b = ty;
+    v.i->ty.byte = ty;
     return v.b;
 }
 
@@ -154,7 +154,7 @@ FUNCTIONALITY void* makeIS(void * ty,int n) {
     v.i = data;
     v.i->t = IS ;
     v.i->label = n ;
-    v.i->ty.b = ty;
+    v.i->ty.byte = ty;
     return v.b;
 }
 #endif
@@ -340,8 +340,7 @@ FUNCTIONALITY void* N(makeContinuation)(KONT kstar){
  * =====================================================================================
  */
 FUNCTIONALITY void* N(makeUnit)(void){
-    static enum N(Tag) unit_term = N(UNIT);
-    return &unit_term;
+    return ((void *) N(UNIT));
 }
 
 
@@ -352,8 +351,7 @@ FUNCTIONALITY void* N(makeUnit)(void){
  * =====================================================================================
  */
 FUNCTIONALITY void* N(makeNop)(void){
-    static enum N(Tag) nop_term = N(NOP);
-    return &nop_term;
+    return ((void *) N(NOP));
 }
 
 

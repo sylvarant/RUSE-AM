@@ -22,7 +22,12 @@
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY VALUE N(readCode)(char***);
-FUNCTIONALITY VALUE * N(readByteCode) (char*,int *);
+FUNCTIONALITY void * N(readCode)(char***);
+
+#ifdef SECURE
+FUNCTIONALITY ANNOTATION ** N(readByteCode) (char*,int *);
+#else
+FUNCTIONALITY VALUE * N(readByteCode)(char*,int*); 
+#endif
 
 #endif

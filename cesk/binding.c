@@ -13,7 +13,7 @@
  * =====================================================================================
  */
 
-#include "binding.h" 
+#include "cesk.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,25 +24,25 @@
  *  Description:    return an element from a given environment for a given key
  * =====================================================================================
  */
-FUNCTIONALITY int N(getBinding)(BINDING * ls,char * key)
+FUNCTIONALITY VALUE * N(getBinding)(BINDING * ls,char * key)
 {
     BINDING * node = ls;
     while(node) {
         if(strcmp(key,node->key) == 0)
-            return node->value;
+            return node->address;
         node = node->next;
     }
-    return (-1);
+    return NULL;
 }
 
 
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    insertBinding
- *  Description:    add something to environment
+ *  Description:    add a new binding to the environment
  * =====================================================================================
  */
-FUNCTIONALITY void N(insertBinding)(BINDING ** head,char * key,int value)
+FUNCTIONALITY VALUE * N(insertBinding)(BINDING ** head,char * key)
 {
     BINDING * node = MALLOC(sizeof(BINDING));
 
@@ -54,7 +54,10 @@ FUNCTIONALITY void N(insertBinding)(BINDING ** head,char * key,int value)
         (*head)    = node;
     }
     node->key = key;
-    node->value = value;
+    node->address = MALLOC(sizeof(VALUE));
+	node->address->tt = N(ERROR);
+
+	return node->address;
 }
 
 
@@ -62,8 +65,10 @@ FUNCTIONALITY void N(insertBinding)(BINDING ** head,char * key,int value)
  * ===  FUNCTION  ======================================================================
  *         Name:    copyEnvironment
  *  Description:    copy the environment
+ *					Deprecated !!
  * =====================================================================================
  */
+/*
 FUNCTIONALITY BINDING * N(copyBinding)(BINDING * ls){
 
     if(ls ==  NULL) return NULL;
@@ -88,4 +93,4 @@ FUNCTIONALITY BINDING * N(copyBinding)(BINDING * ls){
 
     return ret;
 }
-
+*/

@@ -22,7 +22,6 @@
  *  Preprocessor
  *-----------------------------------------------------------------------------*/
 #define NELEMS(x)  (sizeof(x) / sizeof(x[0]))
-#define FREECELL(y) do{} while(0); // if(y.b != NULL) sfreeValue(&y);
 
 
 /*-----------------------------------------------------------------------------
@@ -32,11 +31,6 @@
 DECLARE_SM(secure_vm,0x1234);
 #endif
 
-
-/*-----------------------------------------------------------------------------
- *  Local Constants
- *-----------------------------------------------------------------------------*/
-enum{NUM_ELEMS = 1024};
 
 /*-----------------------------------------------------------------------------
  *  Local Functions
@@ -49,8 +43,9 @@ LOCAL VALUE evalAtom(VALUE atom);
 LOCAL unsigned int isAtom(VALUE atom);
 
 #ifdef SECURE
-LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal);
-LOCAL void * convertout(VALUE in);
+LOCAL VALUE convertin(OTHERVALUE ptr,TYPE goal);
+LOCAL void * convertout(VALUE in,TYPE goal);
+LOCAL void function_types(TYPE goal,TYPE * left, TYPE * right);
 #endif
 
 
@@ -84,17 +79,13 @@ LOCAL void debugState(){
     char * ctrl = N(toString)(mystate->control,0);
     DEBUG_PRINT("%s",ctrl); 
     free(ctrl);
-    DEBUG_PRINT("** STORES : %d",mystate->free_adr); 
-    for(int i = 0; i < mystate->free_adr; i++){
-        char * str =  N(toString)(mystate->storage[i],0);
-        DEBUG_PRINT("%d == %s",i,str);
-        free(str);
-    }
     DEBUG_PRINT("** ENVIRONMENT : "); 
     BINDING *node = mystate->env;
     while(node){
-        DEBUG_PRINT("%s at %d ",node->key,node->value);
+        char * str =  N(toString)(*(node->address),0);
+        DEBUG_PRINT("%s => %s ",node->key,node->address);
         node = node->next;
+        free(str);
     }
     DEBUG_PRINT("** CONTINUATION"); 
     VALUE cc; 
@@ -104,18 +95,19 @@ LOCAL void debugState(){
     free(strc);
 
     #ifdef SECURE
-    DEBUG_PRINT("** FUNCTIONS"); 
-    Label * snode = mystate->label;
+    DEBUG_PRINT("** Labels"); 
+    LABEL * snode = mystate->label;
     while(snode != NULL){ 
-        DEBUG_PRINT("--> Label == %d",snode->label);
+        char * strd =  N(toString)(snode->an->t,0);
+        DEBUG_PRINT("--> Label == %d - %s",snode->label,strd);
         snode = snode->next;
+        free(strd);
     }
     #endif
     DEBUG_PRINT("=========================="); 
 }
 
 #endif
-
 
 
 /* 
@@ -148,7 +140,7 @@ LOCAL unsigned int isAtom(VALUE el)
  *  Description:    convert the low level values into secure
  * =====================================================================================
  */
-LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal){
+LOCAL VALUE convertin(OTHERVALUE ptr,TYPE goal){
 
     switch(ptr.b->t){
 
@@ -194,7 +186,7 @@ LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal){
 
         default : {
                 VALUE v;
-                v.b =  makeSI(goal.b,ptr.b);
+                v.b =  makeSI(goal.byte,ptr.b);
                 return v;
             }
     }
@@ -206,28 +198,66 @@ LOCAL VALUE convertin(OTHERVALUE ptr,OTHERTYPE goal){
  *  Description:    convert the low level values into insecure
  * =====================================================================================
  */
-LOCAL void * convertout(VALUE in){
+LOCAL void * convertout(VALUE in,TYPE goal){
+
     switch(in.b->t){
 
-            case N(BOOLEAN) :
-                return (OTHERN(makeBoolean)(in.b->value)); 
+        case N(BOOLEAN) :
+            return (OTHERN(makeBoolean)(in.b->value)); 
 
-            case N(INT) :
-                return (OTHERN(makeInt)(in.z->value)); 
+        case N(INT) :
+            return (OTHERN(makeInt)(in.z->value)); 
 
-            default :{
-                int d = mystate->free_adr; 
-                mystate->storage[mystate->free_adr] = in;
-                insertLabel(&(mystate->label),mystate->free_adr);
-                DEBUG_PRINT("Adding Label (A) == %d",d);
-                mystate->free_adr++;
-                Type ty;
-                ty.b = N(makeTIgnore)(); // TODO type check
-                return makeIS(ty.b,d);
-            }
+        // TODO is this secure ?
+        default :{
+                
+            // label -> in -> goal
+            ANNOTATION * code = MALLOC(sizeof(ANNOTATION)); 
+            code->t  = in;
+            code->ty = goal;
+            int label = N(newLabel)();
+            N(insertLabel)( &(mystate->label),label,code);
+            DEBUG_PRINT("Adding Label (A) == %d",label);
+
+            // IS : goal : label
+            return makeIS(goal.byte,label);
+        }
     }
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:    function_types
+ *  Description:    extract left and right types from the goal
+ * =====================================================================================
+ */
+LOCAL void function_types(TYPE goal,TYPE * left, TYPE * right){
+
+    // We have to check t1->t2
+    switch(N(language)){
+                    
+        case SCHEME : {
+            left->byte  = N(makeTIgnore)();
+            right->byte = N(makeTIgnore)();
+            break;
+        }
+                        
+        case ML : {
+            if(goal.a->t != N(TARROW)){
+                DEBUG_PRINT("Closure requires arrow type");
+                exit(1);
+            }
+            (*left)  = goal.a->left;
+            (*right) = goal.a->right;
+            break;
+        }
+
+        default :{
+            DEBUG_PRINT("Language not supported");
+            exit(1); 
+        }
+    }
+}
 
 #endif
 
@@ -251,26 +281,19 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
 
     switch(atom.b->t){
 
-    case N(SYMBOL) :{
-        int adress = (int) N(getBinding)(mystate->env,atom.s->name); 
+    case N(SYMBOL) : {
+        VALUE * res = N(getBinding)(mystate->env,atom.s->name); 
 
-        if(adress == -1){ 
+        if(res == NULL){ 
             DEBUG_PRINT("Storage failure for %s",atom.s->name);
-            DEBUG_PRINT("ENVIRONMENT : "); 
-            BINDING *node = mystate->env;
-            while(node){
-                DEBUG_PRINT("%s at %d ",node->key,node->value);
-                node = node->next;
-            }
             exit(1);
         }
 
-        VALUE res = mystate->storage[adress]; 
-        if(res.tt == N(ERROR)) {
+        if((*res).tt == N(ERROR)) {
             DEBUG_PRINT("Unintialized Binding to %s",atom.s->name);
             exit(1);
         }
-        return res;
+        return (*res);
     }
 
     // for a lot of cases don't do anything
@@ -342,29 +365,30 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
          
             case OTHERN(CLOSURE) : {
 
-                // We have to check t1->t2
-                struct N(TArrow) ty; 
-                
-                // introduce the variable 'a 
+                TYPE left,right;
+                function_types(atom.i->ty,&left,&right);
+
+                // introduce the variable 'a at label
                 VALUE * la = MALLOC(1 * sizeof(VALUE));
                 la[0].b = N(makeSymbol)("a");
                 
-                // add it to the storage at position c
-                int c = mystate->free_adr;
-                mystate->storage[mystate->free_adr].b = la[0].b;
-                insertLabel(&(mystate->label),mystate->free_adr);
-                DEBUG_PRINT("Adding Label (A) == %d",c);
-                mystate->free_adr++;
+                // label -> 'a -> left  in Label bindings
+                ANNOTATION * code = MALLOC(sizeof(ANNOTATION));
+                code->t  = la[0];
+                code->ty = left;
+                int label = N(newLabel)();
+                N(insertLabel)(&(mystate->label),label,code);
+                DEBUG_PRINT("Adding Label (A) == %d",label);
 
                 // apply closure to IS 'a     
                 OTHERVALUE * ls = MALLOC(2 * sizeof(OTHERVALUE));
                 ls[0].b = ptr.b;
-                ls[1].b = makeIS(ty.left.b,c);
+                ls[1].b = makeIS(left.byte,label);
                 void * appl = OTHERN(makeApplication)(2,ls);
 
                 // λ 'a. SI t2 : (ptr.b (IS t1 : 'a))
 				VALUE v; 
-				v.b = N(makeLambda)(1,makeSI(ty.right.b,appl),la);
+				v.b = N(makeLambda)(1,makeSI(right.byte,appl),la);
                 return evalAtom(v);
             }
 
@@ -430,9 +454,10 @@ LOCAL LIMBO applyKont(VALUE val,KONT k)
 
         case N(KLET) : { 
             struct N(KLet) * lk = k.l; 
-            N(insertBinding)(&lk->e,lk->var.s->name,mystate->free_adr);
-		    mystate->storage[mystate->free_adr] = (val); // MEM : Don't clear  
-		    mystate->free_adr++;
+
+            // let x = val
+            VALUE * add = N(insertBinding)(&lk->e,lk->var.s->name);
+            *add = val;
             
 		    mystate->control  = lk->expr;
 		    mystate->env      = lk->e;
@@ -478,28 +503,20 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
     DEBUG_PRINT("CALL PROCEDURE %s",strd);
     free(strd);
     #endif
+
 	if(proc.c->t == N(CLOSURE)){
 
-        int curr = mystate->free_adr;
         int nargs = proc.c->lambda.l->nargs; 
-        DEBUG_PRINT("Proc arg == %d",nargs);
-        mystate->free_adr = curr + nargs; 
 
-		// update enviroment with new adresses for each variable of lambda
-        for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-            N(insertBinding)(&proc.c->env,proc.c->lambda.l->arguments[i].s->name,j); 
-            i++;
-        }
-
-		// update storage with adresses pointing to arguments
-        for(int j = curr,i = 0; j < mystate->free_adr ;j++){
+		// forall xi of λ xi : xi = args[i]
+        for(int i = 0; i < nargs ;i++){
             #ifdef DEBUG
             char * strc = N(toString)((args[i]),0);
-            DEBUG_PRINT("Proc %d == %s",i,strc);
+            DEBUG_PRINT("Setting %s == %s",proc.c->lambda.l->arguments[i].s->name,strc);
             free(strc);
             #endif
-            mystate->storage[j] = (args[i]); // MEM : Don't clear
-            i++;
+            VALUE * add = N(insertBinding)(&proc.c->env,proc.c->lambda.l->arguments[i].s->name); 
+            *add = args[i];
         }
         
 		// create new state with updated storage and envorinment, control = body of lambda
@@ -572,29 +589,22 @@ LOCAL LIMBO step()
 
         case N(SET) : {
             VALUE val = evalAtom(mystate->control.sv->value);
-            int adress = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
-            FREECELL((mystate->storage[adress]))
-            mystate->storage[adress] = val; 
+            VALUE * address = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
+            *address = val; 
             VALUE empty; 
 			empty.b = N(makeNop());
             return applyKont(empty,mystate->cont);
         }
 
         case N(DEFINE) : {
-        
-            // TODO keep ?
-            if( mystate->control.d->var.s->t != N(SYMBOL)) {DEBUG_PRINT("Expected Symbol !!"); exit(1);}
-            int test = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
-
-            if(test == -1){ 
-                N(insertBinding)(&mystate->env,mystate->control.d->var.s->name,mystate->free_adr++);
-            }        
-
-            // once binding exists preform set
             VALUE val = evalAtom(mystate->control.d->expr);
-            int adress = (int) N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
-            FREECELL((mystate->storage[adress]))
-            mystate->storage[adress] = (val); // MEM
+            VALUE * address = N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
+
+            // If binding doesn't exist create one
+            if(address == NULL) 
+                address = N(insertBinding)(&mystate->env,mystate->control.d->var.s->name);
+
+            *address = (val); // MEM
             VALUE empty; 
 			empty.b = N(makeNop());
             return applyKont(empty,mystate->cont);
@@ -612,26 +622,17 @@ LOCAL LIMBO step()
         }
 
         case N(LETREC) : {
-            int curr = mystate->free_adr;
             int nargs = mystate->control.lr->nargs; 
-            mystate->free_adr = curr + nargs; 
 
-		    // update enviroment with new adresses for each variable of lambda
-            for(int j = curr,i = 0; j < mystate->free_adr ;j++){
-                N(insertBinding)(&mystate->env,mystate->control.lr->vars[i].s->name,j); 
-                i++;
+            // create all the variabels first -> they may be recursively intertwined in the x = a definitions
+            VALUE ** list = MALLOC(sizeof(VALUE **) * nargs);
+            for(int i = 0; i < nargs ; i++){
+                list[i] =  N(insertBinding)(&mystate->env,mystate->control.lr->vars[i].s->name);                
             }
 
-            VALUE * list = MALLOC(mystate->control.lr->nargs * (sizeof(VALUE)));
-
-            // evaluate
-            for(int i = 0; i < mystate->control.lr->nargs ;i++){
-                list[i] = evalAtom(mystate->control.lr->exprs[i]);
-            }
-
-		    // update storage with adresses pointing to arguments
-            for(int j = curr,i = 0; j < mystate->free_adr ;j++,i++){
-                mystate->storage[j] = (list[i]); // MEM : new adress do not delete
+            // update locations
+            for(int i = 0; i < nargs ; i++){ 
+                *(list[i]) = evalAtom(mystate->control.lr->exprs[i]);
             }
 
             mystate->control = (mystate->control.lr->body);;
@@ -824,7 +825,6 @@ FUNCTIONALITY void N(inject)(){
     // inject state
     mystate             = MALLOC(sizeof(STATE));
     mystate->env        = NULL;
-    mystate->storage    = MALLOC(NUM_ELEMS * sizeof(VALUE)); 
     mystate->cont.empty = NULL;
     #ifdef SECURE
     mystate->label      = NULL;
@@ -843,16 +843,18 @@ FUNCTIONALITY void N(inject)(){
 ENTRYPOINT void * secure_eval(int label){
 
     DEBUG_PRINT("Check :: label == %d",label);
-
-    if(hasLabel(mystate->label,label)){
-        mystate->control = mystate->storage[label];
+    
+    ANNOTATION * code = N(hasLabel)(mystate->label,label);
+    if(code != NULL){
+        mystate->control = code->t;
         DEBUG_PRINT("Check Succeeded");
 
         // make Return Continuation
         mystate->cont = N(makeKRet)(mystate->cont);
         
         // compute
-        VALUE in = N(steprec)();
+        VALUE in  = N(steprec)();
+        TYPE goal = code->ty;
 
         // No Heap
         switch(in.tt){
@@ -871,14 +873,14 @@ ENTRYPOINT void * secure_eval(int label){
             case N(QUOTE)   : 
             case N(BOOLEAN) : 
             case N(INT)     : 
-                return convertout(in);
+                return convertout(in,goal);
 
             case N(LIST) : {
                 OTHERVALUE v;
 
                 OTHERVALUE * list = MALLOC(in.ls->nargs * (sizeof(OTHERVALUE))); 
                 for(int i =0; i < in.ls->nargs; i++){
-                    list[i].b = convertout(in.ls->args[i]);   
+                    list[i].b = convertout(in.ls->args[i],goal); // TODO fix   
                 }
 
                 struct OTHERN(List) * data = MALLOC(sizeof(struct OTHERN(List)));
@@ -891,27 +893,29 @@ ENTRYPOINT void * secure_eval(int label){
             }
 
             case N(CLOSURE) : {
-                int c = mystate->free_adr;
-                mystate->free_adr++;
-                insertLabel(&(mystate->label),c);
-                VALUE * ls = MALLOC(2 * sizeof(VALUE));
-                ls[0].b = in.b;
-                OTHERTYPE oty;          
-                oty.b = OTHERN(makeTIgnore)();
-                OTHERVALUE other;
-                other.b = OTHERN(makeSymbol)("z");
-                ls[1].b = makeSI(oty.b,other.b); // TODO typecheck
-                mystate->storage[c].b = N(makeApplication)(2,ls);
-                #ifdef DEBUG
-                char * strc = N(toString)(mystate->storage[c],0);
-                DEBUG_PRINT("Return :: Adding Label == %d \t for member %s",c,strc);
-                free(strc);
-                #endif
+
+                TYPE left,right; 
+                function_types(goal,&left,&right);
+                
+                
+                // introduce the variable 'z
                 OTHERVALUE * la = MALLOC(1 * sizeof(OTHERVALUE));
                 la[0].b = OTHERN(makeSymbol)("z");
-                TYPE ty;
-                ty.b = N(makeTIgnore)(); // TODO typecheck
-                return (OTHERN(makeLambda)(1,makeIS(ty.b,c),la)); 
+
+                // apply closure to SI 'z 
+                VALUE * ls = MALLOC(2 * sizeof(VALUE));
+                ls[0].b = in.b;
+                ls[1].b = makeSI(left.byte,la[0].b); // TODO typecheck
+                
+                // add the closure to the storage position at c + new label
+                ANNOTATION * code = MALLOC(sizeof(ANNOTATION));
+                code->ty = right;
+                code->t.b  = N(makeApplication)(2,ls);
+                int label = N(newLabel)();
+                N(insertLabel)(&(mystate->label),label,code);
+                DEBUG_PRINT("Return :: Adding Label == %d",label);
+                
+                return (OTHERN(makeLambda)(1,makeIS(right.byte,label),la)); 
             }
 
             default : break;
@@ -928,6 +932,7 @@ ENTRYPOINT void * secure_eval(int label){
 HOOK char N(input_byte)[];
 #endif
 
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    sload
@@ -938,15 +943,13 @@ ENTRYPOINT void sload(char * strbuf){
     N(inject)();
     int l = 0;
     #ifdef BYTE
-    VALUE * code = N(readByteCode)(strbuf,&l);
+    ANNOTATION ** code = N(readByteCode)(strbuf,&l);
     #else
-    VALUE * code = N(readByteCode)(N(input_byte),&l);
+    ANNOTATION ** code = N(readByteCode)(N(input_byte),&l);
     #endif
     for(int i = 0; i < l; i++){
-        DEBUG_PRINT("Adding Label :: %d",mystate->free_adr);
-        mystate->storage[mystate->free_adr] = code[i];
-        insertLabel(&(mystate->label),mystate->free_adr);
-        mystate->free_adr++;
+        int label = N(newLabel)();
+        N(insertLabel)(&(mystate->label),label,code[i]);
     }
 }
 #endif
@@ -993,7 +996,7 @@ HOOK void run (VALUE * program,int c){
         mystate->control = program[(i+1)%c]; 
     }
     free(program);
-    free(mystate->storage);
+    // TODO free binding
     free(mystate);
 }
 

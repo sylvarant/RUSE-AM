@@ -22,7 +22,7 @@
  *  Local functions
  *-----------------------------------------------------------------------------*/
 #ifdef Secure
-LOCAL int checkML(OTHERVALUE term,OTHERTYPE goal);
+LOCAL int checkML(OTHERVALUE term,TYPE goal);
 #endif
 
 
@@ -33,8 +33,7 @@ LOCAL int checkML(OTHERVALUE term,OTHERTYPE goal);
  * =====================================================================================
  */
 FUNCTIONALITY void * N(makeTIgnore)(){
-    static enum  N(TTag) t = N(TIGNORE);
-    return &t;
+    return (void*) N(TIGNORE);
 }
 
 
@@ -45,8 +44,7 @@ FUNCTIONALITY void * N(makeTIgnore)(){
  * =====================================================================================
  */
 FUNCTIONALITY void * N(makeTUnit)(){
-    static struct N(TUnit) unit_type = {N(TUNIT)};
-    return &unit_type; 
+    return (void*) N(TUNIT);
 }
 
 
@@ -57,8 +55,7 @@ FUNCTIONALITY void * N(makeTUnit)(){
  * =====================================================================================
  */
 FUNCTIONALITY void * N(makeTInt)(){
-    static struct N(TInt) int_type  = {N(TINT)};
-    return &int_type; 
+    return (void *) N(TINT);
 }
 
 
@@ -69,8 +66,7 @@ FUNCTIONALITY void * N(makeTInt)(){
  * =====================================================================================
  */
 FUNCTIONALITY void * N(makeTBoolean)(){
-    static struct N(TBoolean) bool_type = {N(TBOOLEAN)};
-    return &bool_type;
+    return (void *) N(TBOOLEAN);
 }
 
 
@@ -84,8 +80,8 @@ FUNCTIONALITY void * N(makeTArrow)(void * l,void * r){
     TYPE t;
     t.a    = MALLOC(sizeof(struct N(TArrow)));
     t.a->t = N(TARROW);
-    t.a->left.b  = l;
-    t.a->right.b = r;
+    t.a->left.byte  = l;
+    t.a->right.byte = r;
     return t.a; 
 }
 
@@ -97,18 +93,18 @@ FUNCTIONALITY void * N(makeTArrow)(void * l,void * r){
  *  Description:    typechecks insecure Values
  * =====================================================================================
  */
-LOCAL int checkML(OTHERVALUE term,OTHERTYPE goal){
+LOCAL int checkML(OTHERVALUE term,TYPE goal){
    
     switch(term.b->t){
 
-        case OTHERN(BOOLEAN) : return (goal.b == OTHERN(makeTBoolean)());
+        case OTHERN(BOOLEAN) : return (goal.byte == N(makeTBoolean)());
 
-        case OTHERN(INT) : return (goal.i == OTHERN(makeTInt)());
+        case OTHERN(INT) : return (goal.byte == N(makeTInt)());
 
-        case OTHERN(UNIT) : return (goal.u == OTHERN(makeTUnit)());
+        case OTHERN(UNIT) : return (goal.byte == N(makeTUnit)());
 
         default : {
-            DEBUG_PRINT("Term cannot be ML type checked");    
+            DEBUG_PRINT("Term cannot be secure ML type checked");    
             exit(1);
         }
     }
@@ -123,19 +119,20 @@ LOCAL int checkML(OTHERVALUE term,OTHERTYPE goal){
  *  Description:    typechecks insecure Values
  * =====================================================================================
  */
-FUNCTIONALITY int N(checkType)(void * l,OTHERTYPE goal){
+FUNCTIONALITY int N(checkType)(void * l,TYPE goal){
     OTHERVALUE t;
     t.b = l;
 
-    switch(goal.b->t){
+    switch(N(language)){
 
-        case N(TIGNORE) : 
-            // secure language is scheme : do nothing
-            return 1;
+        case SCHEME : return 1;
 
-        default :
-            return checkML(t,goal);
+        case ML : return checkML(t,goal);
 
+        default : {
+            DEBUG_PRINT("Language not supported !");
+            exit(1);
+        }
     }
 }
 

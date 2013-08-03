@@ -18,16 +18,9 @@
 
 #ifdef SECURE
 
-// load insecure header
-#include "undefine.h"
-#include "insecure_macro.h"
-#include "ruse.h"
-
-// load secure header
-#include "undefine.h"
-#define SECURE
-#include "secure_macro.h"
-#include "ruse.h"
+// secure and insecure definitions
+#include "ruse_all.h"
+#include "label.h"
 
 #else
 
@@ -36,16 +29,10 @@
 
 #endif
 
-#include "label.h"
-
-/*-----------------------------------------------------------------------------
- *  Types
- *-----------------------------------------------------------------------------*/
-typedef VALUE * Memory;
-
 
 /*-----------------------------------------------------------------------------
  *  CESK state
+ *  => the storage is the heap !!
  *-----------------------------------------------------------------------------*/
 typedef struct N(State_t){
     
@@ -55,15 +42,12 @@ typedef struct N(State_t){
     // the environment the closes the control
     BINDING * env; 
 
-    // the storage mapping locations to VALUE
-    Memory storage;
-
     // the current continuation
     KONT cont;
 
     // when secure add labelling
     #ifdef SECURE
-    Label * label;
+    LABEL * label;
     #endif
 
     // the current free address TODO -> garbage collection remove this
@@ -82,6 +66,12 @@ typedef union N(Limbo_u){
     // an answer was produced
     VALUE answer;
 }LIMBO;
+
+
+/*-----------------------------------------------------------------------------
+ *  Global Variables
+ *-----------------------------------------------------------------------------*/
+FUNCTIONALITY enum LANGUAGE N(language);
 
 /*-----------------------------------------------------------------------------
  *  Functionality

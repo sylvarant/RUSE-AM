@@ -13,9 +13,14 @@
  * =====================================================================================
  */
 
+
+#ifndef ENVIRONMENT_INCLUDED
 #define ENVIRONMENT_INCLUDED
 
 #include "global.h"
+
+// will be overwritten by the use of ruse_all
+#include "insecure_macro.h"
 
 /*-----------------------------------------------------------------------------
  *  Environment Binding
@@ -23,7 +28,7 @@
  *-----------------------------------------------------------------------------*/
 typedef struct N(Binding_t) {
     char *key;
-    int value;
+    union N(Value_u) * address;
     struct N(Binding_t) * next;
 
 }BINDING;
@@ -32,7 +37,10 @@ typedef struct N(Binding_t) {
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY void N(insertBinding)(BINDING **,char *,int);
-FUNCTIONALITY int N(getBinding)(BINDING *,char *);
-FUNCTIONALITY BINDING * N(copyBinding)(BINDING *);
+FUNCTIONALITY union N(Value_u) * N(insertBinding)(BINDING **,char *);
+FUNCTIONALITY union N(Value_u) * N(getBinding)(BINDING *,char *);
 
+// Deprecated
+// FUNCTIONALITY BINDING * N(copyBinding)(BINDING *);
+
+#endif

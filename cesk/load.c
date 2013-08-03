@@ -13,14 +13,13 @@
  * =====================================================================================
  */
 
-
+// c-lib
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 
-#include "cesk.h"
-
+#include "load.h"
 
 
 /*-----------------------------------------------------------------------------
@@ -132,22 +131,23 @@ LOCAL void * readType(char *** strbuf){
         switch(id){
 
             case N(TIGNORE) : 
-                return OTHERN(makeTIgnore)();
+                return N(makeTIgnore)();
 
             case N(TUNIT) :
-                return OTHERN(makeTUnit)();
+                return N(makeTUnit)();
             
             case N(TBOOLEAN) :
-                return OTHERN(makeTBoolean)();
+                return N(makeTBoolean)();
 
             case N(TINT) :
-                return OTHERN(makeTInt)();
+                return N(makeTInt)();
 
             case N(TARROW) : {
+				// C evaluation order is not defined !!!
                 TYPE left,right;
-                left.b = readType(strbuf);  
-                right.b = readType(strbuf);
-                return OTHERN(makeTArrow)(left.b,right.b);
+                left.byte = readType(strbuf);  
+                right.byte = readType(strbuf);
+                return N(makeTArrow)(left.byte,right.byte);
             }
 
             default :
@@ -357,20 +357,20 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
             case SI : {
                 TYPE t;  
                 OTHERVALUE v; 
-                t.b = readType(strbuf);
+                t.byte = readType(strbuf);
                 v.b    = OTHERN(readCode)(strbuf); // TODO leak::memory to otherside
-                return makeSI(t.b,v.b);
+                return makeSI(t.byte,v.b);
             }
 
             #else
             case IS : { 
                 char *end;
-                Type t;
-                t.b = readType(strbuf);
+                TYPE t;
+                t.byte = readType(strbuf);
                 long temp = strtol((*strbuf)[0], &end, 10); 
                 if (!(end == (*strbuf)[0] || *end != '\0' || errno == ERANGE)){
                     (*strbuf)++;
-                    return makeIS(t.b,(int)temp);
+                    return makeIS(t.byte,(int)temp);
                 }else{
                     DEBUG_PRINT("ERROR: Missing Identifier @INT.");
                     exit(1);
@@ -395,7 +395,11 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
  *  Description:    convert to storage locations
  * =====================================================================================
  */
+#ifdef SECURE
+FUNCTIONALITY ANNOTATION ** N(readByteCode)(char * input,int * line_n){
+#else
 FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
+#endif
 
 	int ignore = 0;
 	
@@ -405,6 +409,7 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 
     char *end;
     long lang = strtol(list[0], &end, 10); 
+	N(language) = (enum LANGUAGE) lang;
     if (!(end == list[0] || *end != '\0' || errno == ERANGE)){
 
         // TODO no better solution ?
@@ -412,18 +417,27 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 		    DEBUG_PRINT("Language not supported yet :: %d",lang);
         }
 
-        
         char *end2;
         long lines = strtol(list[1], &end2, 10); 
         if (!(end == list[1] || *end2 != '\0' || errno == ERANGE)){
 
             *line_n = (int) lines;
-		    DEBUG_PRINT("Program -- Expecting %d lines", *line_n);
-		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
             list +=2;
+		    DEBUG_PRINT("Program -- Expecting %d lines", *line_n);
+
+			#ifdef SECURE
+			ANNOTATION ** locations = MALLOC(*line_n * sizeof(ANNOTATION*));
+			for(int i = 0; i < *line_n ; i++){
+				locations[i]			= MALLOC(sizeof(ANNOTATION));	
+				(*(locations[i])).t.b		= N(readCode)(&list);
+				(*(locations[i])).ty.byte = readType(&list);
+			}
+			#else
+		    VALUE * locations = MALLOC(*line_n * sizeof(VALUE));     
 		    for(int i = 0; i < *line_n ; i++){
 			    locations[i].b = N(readCode)(&list);
 		    }
+			#endif
             
 			// clear data
             freesplit(orig);

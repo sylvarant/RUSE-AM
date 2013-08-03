@@ -15,25 +15,35 @@
 
 #ifdef SECURE
 
-#include "global.h"
-
 #ifndef LABEL_INCLUDED
 #define LABEL_INCLUDED
 
+#include "ruse_all.h"
+
 /*-----------------------------------------------------------------------------
- *  List of labels -- labels are integers
+ * Label annotations
+ *-----------------------------------------------------------------------------*/
+typedef struct Annotation_t{
+	TYPE ty;		
+	VALUE t;			
+}ANNOTATION;
+
+/*-----------------------------------------------------------------------------
+ *  List of labels -- labels are integers -> data
  *-----------------------------------------------------------------------------*/
 typedef struct Label_t{
     int label;  
+	ANNOTATION * an;	
     struct Label_t * next;  
-}Label;
+}LABEL;
 
 
 /*-----------------------------------------------------------------------------
  *  Functionality
  *-----------------------------------------------------------------------------*/
-FUNCTIONALITY void insertLabel(Label **,int);
-FUNCTIONALITY unsigned int hasLabel(Label *,int);
+FUNCTIONALITY void N(insertLabel)(LABEL **,int,ANNOTATION*);
+FUNCTIONALITY ANNOTATION * N(hasLabel)(LABEL *,int);
+FUNCTIONALITY int N(newLabel)(void);
 
 #endif
 #endif

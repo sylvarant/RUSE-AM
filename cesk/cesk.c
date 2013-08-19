@@ -508,21 +508,25 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
 
         int nargs = proc.c->lambda.l->nargs; 
 
+        #ifdef DEBUG
+        DEBUG_PRINT(" STOP ");
+        BINDING *node = proc.c->env;
+        while(node){
+        char * str =  N(toString)(*(node->address),0);
+        DEBUG_PRINT("%s => %s ",node->key,str);
+        node = node->next;
+        free(str);
+        }
+        DEBUG_PRINT(" STOP ");
+        #endif
+
+
 		// forall xi of λ xi : xi = args[i]
         for(int i = 0; i < nargs ;i++){
             #ifdef DEBUG
             char * strc = N(toString)((args[i]),0);
             DEBUG_PRINT("Setting %s == %s",proc.c->lambda.l->arguments[i].s->name,strc);
             free(strc);
-            DEBUG_PRINT("TIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
-            DEBUG_PRINT("** ENVIRONMENT : "); 
-            BINDING *node = proc.c->env;
-            while(node){
-                char * str =  N(toString)(*(node->address),0);
-                DEBUG_PRINT("%s => %s ",node->key,str);
-                node = node->next;
-                free(str);
-            }
             #endif
             
 
@@ -599,8 +603,8 @@ LOCAL LIMBO step()
         }
 
         case N(SET) : {
-            VALUE val = evalAtom(mystate->control.sv->value);
             VALUE * address = N(getBinding)(mystate->env, mystate->control.sv->var.s->name); 
+            VALUE val = evalAtom(mystate->control.sv->value);
             *address = val; 
             VALUE empty; 
 			empty.b = N(makeNop());
@@ -608,13 +612,13 @@ LOCAL LIMBO step()
         }
 
         case N(DEFINE) : {
-            VALUE val = evalAtom(mystate->control.d->expr);
             VALUE * address = N(getBinding)(mystate->env, mystate->control.d->var.s->name); 
 
             // If binding doesn't exist create one
             if(address == NULL) 
                 address = N(insertBinding)(&mystate->env,mystate->control.d->var.s->name);
 
+            VALUE val = evalAtom(mystate->control.d->expr);
             *address = (val); // MEM
             VALUE empty; 
 			empty.b = N(makeNop());

@@ -428,8 +428,8 @@ FUNCTIONALITY VALUE * N(readByteCode)(char * input,int * line_n){
 			#ifdef SECURE
 			ANNOTATION ** locations = MALLOC(*line_n * sizeof(ANNOTATION*));
 			for(int i = 0; i < *line_n ; i++){
-				locations[i]			= MALLOC(sizeof(ANNOTATION));	
-				(*(locations[i])).t.b		= N(readCode)(&list);
+				locations[i]			  = MALLOC(sizeof(ANNOTATION));	
+				(*(locations[i])).t.b	  = N(readCode)(&list);
 				(*(locations[i])).ty.byte = readType(&list);
 			}
 			#else

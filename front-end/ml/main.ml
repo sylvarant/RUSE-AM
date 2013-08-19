@@ -85,7 +85,7 @@ let main() =
 
     let prog = Parser.adriaan Lexer.token lexbuf in
 (*    RuseMLTyping.type_prog !init_env prog; *)
-    (print_string (ByteCompiler.parse prog));
+    (print_string (ByteCompiler.compile !init_env prog));
     Format.print_newline();
     exit 0
   with

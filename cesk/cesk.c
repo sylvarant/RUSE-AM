@@ -83,7 +83,7 @@ LOCAL void debugState(){
     BINDING *node = mystate->env;
     while(node){
         char * str =  N(toString)(*(node->address),0);
-        DEBUG_PRINT("%s => %s ",node->key,node->address);
+        DEBUG_PRINT("%s => %s ",node->key,str);
         node = node->next;
         free(str);
     }
@@ -514,7 +514,18 @@ LOCAL LIMBO apply(VALUE proc,VALUE * args){
             char * strc = N(toString)((args[i]),0);
             DEBUG_PRINT("Setting %s == %s",proc.c->lambda.l->arguments[i].s->name,strc);
             free(strc);
+            DEBUG_PRINT("TIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
+            DEBUG_PRINT("** ENVIRONMENT : "); 
+            BINDING *node = proc.c->env;
+            while(node){
+                char * str =  N(toString)(*(node->address),0);
+                DEBUG_PRINT("%s => %s ",node->key,str);
+                node = node->next;
+                free(str);
+            }
             #endif
+            
+
             VALUE * add = N(insertBinding)(&proc.c->env,proc.c->lambda.l->arguments[i].s->name); 
             *add = args[i];
         }

@@ -14,13 +14,13 @@ GetOptions('secure' => \$secure);
 
 if($secure){
     say "#ifdef SECURE";
+    say "#include \"secure_macro.h\"";
 }else{
     say "#ifndef SECURE";
+    say "#include \"insecure_macro.h\"";
 }
-say "#include \"global.h\"";
 
 say "char N(input_byte)[]={";
-
 
 open(my $fh,$ARGV[0]) or die("ERROR:: $!");
 my @array = <$fh>; 

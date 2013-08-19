@@ -21,7 +21,7 @@ open Typechecker
  *-----------------------------------------------------------------------------*)
 module ByteCompiler : sig
 
-    val parse : RuseML.term list -> string
+    val compile : Ruse.RuseMLEnv.binding Modules.Ident.tbl -> RuseML.term list -> string
 
 end = 
 struct
@@ -78,10 +78,16 @@ struct
     (* ported from Leroy *)
     let variable_names = ref ([] : (type_variable * string) list)
 
-    (* the outer code frame *)
-    let xnr = ref 0
-    let outl = ref []
 
+    (*
+     * ===  FUNCTION  ======================================================================
+     *         Name:    new_address
+     *  Description:    return a new address
+     * =====================================================================================
+     *)
+    let new_address =
+        let count = ref (-1) in
+        fun () -> incr count; !count
 
     (*
      * ===  FUNCTION  ======================================================================
@@ -169,7 +175,7 @@ struct
      *  Description:    convert to a sequnce of bytes
      * =====================================================================================
      *)
-    let rec term_byte = function
+    let rec term_byte outl = function
         Constant i -> ((emit (term_bc BConstant)) ^ (emit i))
         | Boolean b -> ( 
             let bti = function
@@ -180,21 +186,20 @@ struct
         | Longident p -> (let str = (path_str p) in
             ((emit (term_bc BLongindent))^(emit (String.length str))^str^"\n")) 
         | Function(id, body) -> 
-            ((emit (term_bc BFunction)) ^"1\n"^ (term_byte body)^(term_byte (Longident (Pident id)))) (*^(type_byte ty))*)
+            ((emit (term_bc BFunction)) ^"1\n"^ (term_byte outl body)^(term_byte outl (Longident (Pident id)))) (*^(type_byte ty))*)
         | Apply(t1, t2) -> 
-            ((emit (term_bc BApply)) ^"2\n"^ (term_byte t1)^(term_byte t2))
+            ((emit (term_bc BApply)) ^"2\n"^ (term_byte outl t1)^(term_byte outl t2))
         | Let(id, t1, t2) -> 
-            ((emit (term_bc BLet)) ^ (term_byte (Longident (Pident id)))^(term_byte t1)^(term_byte t2))
+            ((emit (term_bc BLet)) ^ (term_byte outl (Longident (Pident id)))^(term_byte outl t1)^(term_byte outl t2))
         | Prim(c,ls) -> 
-            ((emit (term_bc BPrim))  ^(c^"\n")^(String.concat "\n" (List.map term_byte ls))^"\n")
+            ((emit (term_bc BPrim))^(emit 2) ^(c^"\n")^(String.concat "\n" (List.map (fun x  -> term_byte outl x) ls))^"\n")
         | If(t1,t2,t3) -> 
-            ((emit (term_bc BIf))^(term_byte t1)^(term_byte t2)^(term_byte t3))
+            ((emit (term_bc BIf))^(term_byte outl t1)^(term_byte outl t2)^(term_byte outl t3))
         | IS(ty,t1) ->(
-            let c = !xnr in
-            xnr := !xnr + 1;
-            outl := ((term_byte t1) :: !outl);  
+            let c = new_address() in
+            outl := (((term_byte outl t1),(type_byte ty)) :: !outl);  
             ((emit (term_bc BIS)) ^ (type_byte ty) ^ (emit c)))
-        | SI(ty,t1) -> ((emit (term_bc BSI)) ^ (type_byte ty) ^ (term_byte t1))
+        | SI(ty,t1) -> ((emit (term_bc BSI)) ^ (type_byte ty) ^ (term_byte outl t1))
         | _ -> (raise (Cannot_compile "Not supported by term_byte"))
 
 
@@ -207,22 +212,26 @@ struct
     let rec build = function
         | [] -> ([],[])
         | l::ls -> 
-            let _ = outl := [] in
-            let head = (term_byte l) in
+            let outl = ref [] in
+            let head = (term_byte outl l) in
             let (xxpr,tail) = (build ls) in  
             (((List.rev !outl) @ xxpr),head :: tail)  
 
 
    (* 
     * ===  FUNCTION  ======================================================================
-    *         Name:    parse
-    *  Description:    parse a list of expressions into a string of bytes
+    *         Name:    compile
+    *  Description:    compile a list of expressions into a string of bytes
     * =====================================================================================
     *)
-    let parse terms = 
+    let compile init_env terms = 
 
-        (* start from a clean slate *)
-        xnr := 0;
+        (* Typececk original program *)
+        (*type_term  *)
+
+        (* TODO normalize *)
+
+        (* TODO typecheck  again*)
     
         (* build bye code *)
         let (xxpr,lst) = build terms in
@@ -236,7 +245,7 @@ struct
                 "==@@==PARSER==@@==\n";     (* second header *)
                 "0\n"; 
                 (emit (List.length xxpr));
-                (String.concat "\n" (List.rev xxpr)) 
+                (String.concat "\n" (List.fold_right (fun (x,y) a -> x :: y :: a ) (List.rev xxpr) [] )) 
             ] 
         in
         (String.concat "" bst)

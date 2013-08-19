@@ -18,7 +18,6 @@
 
 
 ; Global variables TODO :: remove
-(define xnr 0)
 (define xxpr '())
 (define outl '())
 
@@ -58,6 +57,14 @@
 (define (prefix in elem)
     (string-append (number->string (code in elem)) "\n")
 )
+
+;make address generator
+(define (make-address-from counter)
+  (lambda ()
+    (set! counter (+ counter 1))
+    counter))
+
+(define make-address (make-address-from -1))
 
 
 ;prim to string
@@ -192,10 +199,9 @@
         [`(SI ,arg)  (string-append (prefix in 'SI) (number->string 0) "\n" (c-gener arg #f))] ;(error "Cannot cross to Insecure from Secure")  ]
     ; IS
         [`(IS ,arg) (begin  
-                (let ((c xnr))
-                (set! xnr (+ xnr 1))
-                (set! outl  (cons (c-gener arg #t) outl)) 
-                (string-append (prefix in 'IS) (number->string 0) "\n" (number->string c))))] ;(error "Cannot cross to Secure from InSecure") )]
+                (let ((c (make-address)))
+                (set! outl (cons `(,(c-gener arg #t) . ,(string-append (number->string 0) "\n")) outl)) 
+                (string-append (prefix in 'IS) (number->string 0) "\n" (number->string c))))] 
 
     ; function appl
         [`(,f . ,args)
@@ -232,7 +238,7 @@
     (emit "0") ; Language
     (emit (number->string (length xxpr)))
     (when (> (length xxpr) 0)
-        (emit (string-join (reverse xxpr)  "\n")))
+        (emit (string-join (foldr (lambda (x a) (cons (car x) (cons (cdr x) a))) '() (reverse xxpr)) "\n")))
 )
 
 

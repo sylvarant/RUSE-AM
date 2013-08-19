@@ -10,6 +10,7 @@ extarray=(  ml scm )
 i=0
 options="f"
 force=0
+rusepos="."
 
 ############################
 # Function :: Capitalize
@@ -38,8 +39,8 @@ do
 done
 
 # create RUSE for all
-./ruse -c
-./ruse -dc
+"$rusepos"/ruse -c
+"$rusepos"/ruse -dc
 
 # TODO create ML and SCHEME specific ruse
 echo "Done Compiling"
@@ -48,15 +49,15 @@ echo "Done Compiling"
 # generate byte code for every test
 for dir in "${langarray[@]}"; do
     echo -e "\033[1;33m => Parsing ::  $(capitalize $dir)\033[0m"
-    for f in test/$dir/*.${extarray[$i]}; do
+    for f in "$rusepos"/test/$dir/*.${extarray[$i]}; do
         filename=$(basename "$f" 2> /dev/null) 
         extension="${filename##*.}"
         base="${filename%.*}"
-        f2=./test/$dir/byte/${base}.insec.byte_${extension}  
+        f2="$rusepos"/test/$dir/byte/${base}.insec.byte_${extension}  
         if [ $f -nt $f2 ] || [ $force -eq 1 ]; then
             echo ">> $f"
-            ./ruse -p $f 
-            mv *.byte* test/$dir/byte 2> /dev/null
+            "$rusepos"/ruse -p $f 
+            mv *.byte* "$rusepos"/test/$dir/byte 2> /dev/null
         fi
     done
     i=$[i + 1]

@@ -12,9 +12,10 @@
  *)
 
 (* Requires the Ruse specification and Leroy's path definition in modules, Typechecker is needed by IS/SI *)
-open  Ruse
-open  Modules
+open Ruse
+open Modules
 open Typechecker
+open Normalizer
 
 (*-----------------------------------------------------------------------------
  *  The bytecode compiler for Ruse ml
@@ -229,12 +230,13 @@ struct
         (* Typececk original program *)
         (*type_term  *)
 
-        (* TODO normalize *)
-
+        (* normalize *)
+        let anf_terms = (ANFNormalizer.normalize terms) in
         (* TODO typecheck  again*)
     
         (* build bye code *)
-        let (xxpr,lst) = build terms in
+        let (xxpr,lst) = build anf_terms in
+
         let bst = 
             [   "==@@==PARSER==@@==\n";     (* first header *)
                 (emit 1) ;                  (* language == ML *)

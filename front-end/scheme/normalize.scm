@@ -210,6 +210,4 @@
 (define (normalize-program decs)
   (match decs
     ['() '()]
-    [(cons exp rest)
-     (cons (normalize-term exp)
-           (normalize-program rest))]))
+    [(cons exp rest) (cons (normalize-term exp) (normalize-program rest))]))

@@ -162,8 +162,7 @@ function preprocess
             bytext="byte_scm"
             byte_1="/tmp/input1.byte_scm"
             byte_2="/tmp/input2.byte_scm"
-            $cscheme $front/scheme/main.scm < $1  1> buildsrc/result.parser 2>"$parse_log"
-
+            $cscheme $front/scheme/main.scm < $1  1> buildsrc/result.parser 2>"$parse_log" || { echo -e "Scheme Front-end failed to compile ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_scm";next}{print > x;}' buildsrc/result.parser
             ;;
 
@@ -172,7 +171,7 @@ function preprocess
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "Front-end failed to parse ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
+            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "ML Front-end failed to compile ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_ml";next}{print > x;}' buildsrc/result.parser
             ;;
 

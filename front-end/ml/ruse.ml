@@ -14,6 +14,16 @@
 (* Requires the Leroy framework for modular modules *)
 open Modules
 
+module RuseDebug : sig
+    
+    val debug : string -> unit
+
+end =
+struct
+
+    let debug str = Printf.eprintf "%s" str
+    
+end
 
 (*-----------------------------------------------------------------------------
  *  Ruse version of ML

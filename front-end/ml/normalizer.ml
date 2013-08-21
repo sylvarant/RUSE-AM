@@ -158,6 +158,7 @@ struct
         | Apply (proc,arg) -> 
             (lift proc (fun x -> lift arg (fun y -> (cont (Apply(x,y)))))) 
         | x when (is_atomic x) -> (cont expr)
+        | _ -> raise (Cannot_normalize "Unsupported term")
 
     (*
      * ===  FUNCTION  ======================================================================

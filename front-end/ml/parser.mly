@@ -32,21 +32,14 @@ let find_type_variable name =
 (* create list form two arguments *)
 let prim_ls arg1 arg2 = arg1 :: arg2 :: []
 
-
-(* TODO remove *)
-let binop op arg1 arg2 =
-  RuseML.Apply(RuseML.Apply(RuseML.Longident(Pident(Ident.create op)), arg1), arg2)
-let ternop op arg1 arg2 arg3 =
-  RuseML.Apply(RuseML.Apply(RuseML.Apply(RuseML.Longident(Pident(Ident.create op)), arg1), arg2), arg3)
-
 %}
 
 %token <string> IDENT
 %token <int> INT
 
-
 %token TINT
 %token TBOOL
+
 %token TRUE
 %token FALSE
 %token IS
@@ -161,10 +154,10 @@ valbind:
 
 simpletype:
     QUOTE IDENT             { RuseML.Var(find_type_variable $2) }
-  | simpletype ARROW simpletype { RuseML.Typeconstr(RuseMLTyping.path_arrow, [$1; $3]) }
-  | simpletype STAR simpletype  { RuseML.Typeconstr(RuseMLTyping.path_star, [$1; $3]) }
-  | TINT                    {RuseML.IntType}
-  | TBOOL                   {RuseML.BooleanType}
+  | simpletype ARROW simpletype { RuseML.Typeconstr(RuseML.path_arrow, [$1; $3]) }
+  | simpletype STAR simpletype  { RuseML.Typeconstr(RuseML.path_star, [$1; $3]) }
+  | TBOOL                   { RuseML.bool_type }
+  | TINT                    { RuseML.int_type }
   | path                    { RuseML.Typeconstr($1, []) }
   | simpletype path         { RuseML.Typeconstr($2, [$1]) }
   | LPAREN simpletypelist RPAREN path { RuseML.Typeconstr($4, List.rev $2) }

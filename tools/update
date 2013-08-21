@@ -38,13 +38,13 @@ do
     esac
 done
 
+Timestamp="$(date +%s)"
+
 # create RUSE for all
 "$rusepos"/ruse -c
+echo "Compiled Production VM"
 "$rusepos"/ruse -dc
-
-# TODO create ML and SCHEME specific ruse
-echo "Done Compiling"
-
+echo "Compiled Debug VM"
 
 # generate byte code for every test
 for dir in "${langarray[@]}"; do
@@ -63,4 +63,7 @@ for dir in "${langarray[@]}"; do
     i=$[i + 1]
 done
 echo "Done Generating Byte Code"
+
+Timestamp="$(($(date +%s)-Timestamp))"
+echo "Update completed in : ${Timestamp} seconds"
 

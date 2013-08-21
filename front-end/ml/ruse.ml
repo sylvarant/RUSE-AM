@@ -49,12 +49,11 @@ struct
     and simple_type =
         Var of type_variable                   
       | Typeconstr of path * simple_type list  
-      | BooleanType
-      | IntType
 
     and type_variable =
       { mutable repres: simple_type option;   
               mutable level: int }        
+
 
     type val_type =
       { quantif: type_variable list;         
@@ -80,6 +79,31 @@ struct
         defbody = subst_type subst def.defbody }
 
     let subst_kind kind subst = kind
+
+
+    (*------------------------ Base types  ------------------------*)
+
+    (* Arrow type *)
+    let ident_arrow = Ident.create "->"
+    let path_arrow = Pident ident_arrow
+    let arrow_type t1 t2 = Typeconstr(path_arrow, [t1;t2])
+
+    (* Integer type *)
+    let ident_int = Ident.create "int"
+    let path_int = Pident ident_int
+    let int_type = Typeconstr(path_int, [])
+
+
+    (* Boolean type *)
+    let ident_bool = Ident.create "bool"
+    let path_bool = Pident ident_bool
+    let bool_type = Typeconstr(path_bool, [])
+
+    (* Star type *)
+    let ident_star = Ident.create "*"
+    let path_star = Pident ident_star
+
+    
 
 end
 

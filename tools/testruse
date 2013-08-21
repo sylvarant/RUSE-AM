@@ -31,6 +31,8 @@ sub getresult{
 }
 
 # Start
+my $start = time;
+
 say "Testing ...";
 
 # New test series for each language
@@ -85,8 +87,13 @@ while ( my ($key, $value) = each(%langs)){
 
 # Total evaluation
 if($counter == (scalar keys %langs)){
-    say "\033[1;33m"." RUSE is working !\033[0m";
+    say "\033[1;33m"."# RUSE is working !\033[0m";
 }else{
-    say "\033[1;31m"." RUSE is failing !\033[0m";
+    say "\033[1;31m"."# RUSE is failing !\033[0m";
+
 }
+
+# Timing
+my $time_taken = time - $start;
+say "# Tests completed in $time_taken seconds"; 
 

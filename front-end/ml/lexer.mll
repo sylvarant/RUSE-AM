@@ -23,10 +23,16 @@ let keyword_table = (Hashtbl.create 17 : (string, token) Hashtbl.t)
 
 let _ = List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok)
  [
+
+(* base types *)
+
+  "bool", TBOOL;
+  "int", TINT;
+
+(* terms *)
+
   "is", IS;
   "si", SI;
-  "int", TINT;
-  "bool", TBOOL;
   "true", TRUE;
   "false", FALSE;
   "function", FUNCTION;

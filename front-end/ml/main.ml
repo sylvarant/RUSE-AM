@@ -31,39 +31,38 @@ let enter_val name ty =
   init_scope := Scope.enter_value id !init_scope;
   init_env := RuseMLEnv.add_value id ty !init_env
 
+
+(* TODO delete what is unnecessary *)
 let _ =
-  let ident_bool = Ident.create "bool" in
-  let path_bool = Pident ident_bool in
-  let bool_type = RuseML.Typeconstr(path_bool, []) in
-  enter_type RuseMLTyping.ident_arrow {RuseMLMod.kind = {RuseML.arity = 2}; RuseMLMod.manifest = None};
-  enter_type RuseMLTyping.ident_star {RuseMLMod.kind = {RuseML.arity = 2}; RuseMLMod.manifest = None};
-  enter_type RuseMLTyping.ident_int {RuseMLMod.kind = {RuseML.arity = 0}; RuseMLMod.manifest = None};
-  enter_type RuseMLTyping.ident_bool {RuseMLMod.kind = {RuseML.arity = 0}; RuseMLMod.manifest = None};
+  enter_type RuseML.ident_arrow {RuseMLMod.kind = {RuseML.arity = 2}; RuseMLMod.manifest = None};
+  enter_type RuseML.ident_star {RuseMLMod.kind = {RuseML.arity = 2}; RuseMLMod.manifest = None};
+  enter_type RuseML.ident_int {RuseMLMod.kind = {RuseML.arity = 0}; RuseMLMod.manifest = None};
+  enter_type RuseML.ident_bool {RuseMLMod.kind = {RuseML.arity = 0}; RuseMLMod.manifest = None};
   List.iter
     (fun name ->
         enter_val name
           { RuseML.quantif = [];
-            RuseML.body = RuseMLTyping.arrow_type RuseMLTyping.int_type 
-                (RuseMLTyping.arrow_type RuseMLTyping.int_type RuseMLTyping.bool_type)})
+            RuseML.body = RuseML.arrow_type RuseML.int_type 
+                (RuseML.arrow_type RuseML.int_type RuseML.bool_type)})
     ["+"; "-"; "*"; "/"; "=="; "<>"; "<"; "<="; ">"; ">="];
   let alpha = RuseMLTyping.newvar() and beta = RuseMLTyping.newvar() in
   let talpha = RuseML.Var alpha and tbeta = RuseML.Var beta in
   enter_val ","
     { RuseML.quantif = [alpha;beta];
-      RuseML.body = RuseMLTyping.arrow_type talpha (RuseMLTyping.arrow_type tbeta
-                  (RuseML.Typeconstr(RuseMLTyping.path_star, [talpha; tbeta]))) };
+      RuseML.body = RuseML.arrow_type talpha (RuseML.arrow_type tbeta
+                  (RuseML.Typeconstr(RuseML.path_star, [talpha; tbeta]))) };
   enter_val "fst"
     { RuseML.quantif = [alpha;beta];
-      RuseML.body = RuseMLTyping.arrow_type
-                  (RuseML.Typeconstr(RuseMLTyping.path_star, [talpha; tbeta])) talpha };
+      RuseML.body = RuseML.arrow_type
+                  (RuseML.Typeconstr(RuseML.path_star, [talpha; tbeta])) talpha };
   enter_val "snd"
     { RuseML.quantif = [alpha;beta];
-      RuseML.body = RuseMLTyping.arrow_type
-                  (RuseML.Typeconstr(RuseMLTyping.path_star, [talpha; tbeta])) tbeta };
+      RuseML.body = RuseML.arrow_type
+                  (RuseML.Typeconstr(RuseML.path_star, [talpha; tbeta])) tbeta };
   enter_val "conditional"
     { RuseML.quantif = [alpha];
-      RuseML.body =RuseMLTyping.arrow_type bool_type
-                          (RuseMLTyping.arrow_type talpha (RuseMLTyping.arrow_type talpha talpha)) }
+      RuseML.body =RuseML.arrow_type RuseML.bool_type
+                          (RuseML.arrow_type talpha (RuseML.arrow_type talpha talpha)) }
 
 
 (*
@@ -84,7 +83,6 @@ let main() =
     MLPrint.print_modtype mty; *)
 
     let prog = Parser.adriaan Lexer.token lexbuf in
-(*    RuseMLTyping.type_prog !init_env prog; *)
     (print_string (ByteCompiler.compile !init_env prog));
     Format.print_newline();
     exit 0

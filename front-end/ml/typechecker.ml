@@ -60,7 +60,9 @@ struct
       match (repr1, repr2) with
         (Typeconstr(path1, args1), Typeconstr(path2, args2)) ->
           if path_equal path1 path2 then
+          begin
             (repr1, repr2)
+        end
           else begin
             try
               scrape_types env (expand_manifest env path1 args1) repr2
@@ -117,8 +119,6 @@ struct
             if v.level > !current_level & not (List.memq v vars)
             then v :: vars
             else vars
-        | BooleanType -> vars
-        | IntType -> vars
         | Typeconstr(path, tl) ->
             List.fold_left gen_vars vars tl in
       { quantif = gen_vars [] ty; body = ty }
@@ -131,25 +131,6 @@ struct
         [] -> vty.body
       | vars -> subst_vars (List.map (fun v -> (v, unknown())) vars) vty.body
 
-    (* Arrow type *)
-    let ident_arrow = Ident.create "->"
-    let path_arrow = Pident ident_arrow
-    let arrow_type t1 t2 = Typeconstr(path_arrow, [t1;t2])
-
-    (* Integer type *)
-    let ident_int = Ident.create "int"
-    let path_int = Pident ident_int
-    let int_type = Typeconstr(path_int, [])
-
-
-    (* Boolean type *)
-    let ident_bool = Ident.create "bool"
-    let path_bool = Pident ident_bool
-    let bool_type = Typeconstr(path_bool, [])
-
-    (* Star type *)
-    let ident_star = Ident.create "*"
-    let path_star = Pident ident_star
 
     (* 
      * ===  FUNCTION  ======================================================================
@@ -158,31 +139,63 @@ struct
      * =====================================================================================
      *)
     let rec infer_type env = function
-        Constant _ -> IntType
-        | Boolean  _ -> BooleanType
-        | Longident path -> instance (Env.find_value path env)
+        Constant _ -> RuseML.int_type
+        | Boolean  _ -> RuseML.bool_type
+        | Longident path ->
+            let (Pident id) = path in
+            RuseDebug.debug ("Variable -- " ^ (Ident.name id)  ^ "\n");
+            let x = instance (Env.find_value path env) in
+            RuseDebug.debug "Variable\n";
+            x
         | Function(param,body) ->
             let type_param = unknown() in
             let type_body =
             infer_type (Env.add_value param (trivial_scheme type_param) env) body in
-            arrow_type type_param type_body
+            RuseML.arrow_type type_param type_body
         | Apply(funct, arg) ->
             let type_funct = infer_type env funct in
             let type_arg = infer_type env arg in
             let type_result = unknown() in
-            unify env type_funct (arrow_type type_arg type_result);
+            unify env type_funct (RuseML.arrow_type type_arg type_result);
             type_result
         | Let(ident, arg, body) ->
             begin_def();
             let type_arg = infer_type env arg in
             end_def();
-            infer_type (Env.add_value ident (generalize type_arg) env) body
-        | IS (ty,t) ->  (* TODO unify ty and body *)
+            RuseDebug.debug "Shiiit\n"; 
+            let nn = (Env.add_value ident (generalize type_arg) env) in
+            RuseDebug.debug ("Shiiit -- " ^ (Ident.name ident)^"\n"); 
+            let tt = infer_type (Env.add_value ident (generalize type_arg) env) body in
+            RuseDebug.debug "Shiiit\n"; 
+            tt
+        | IS (ty,t) -> 
             let type_arg = infer_type env t in
+            unify env type_arg ty;
             type_arg
-        | SI (ty,t) ->  (* TODO unify ty and body *)
+        | SI (ty,t) ->  
             let type_arg = infer_type env t in
+            unify env type_arg ty;
             type_arg
+        | If (t1,t2,t3) ->
+            let t1_type = infer_type env t1 
+            and t2_type = infer_type env t2 
+            and t3_type = infer_type env t3 in
+            unify env t1_type RuseML.bool_type;
+            unify env t2_type t3_type;
+            t3_type
+        | Prim (str,ls) -> 
+            let t1_type = infer_type env (List.hd ls) 
+            and t2_type = infer_type env (List.hd (List.tl ls))  in
+            match str with
+            | "+" | "*" | "-" -> 
+                unify env t2_type RuseML.int_type;
+                unify env t1_type RuseML.int_type;
+                RuseML.int_type
+            | "=" -> 
+                unify env t2_type RuseML.int_type;
+                unify env t1_type RuseML.int_type;
+                RuseML.bool_type
+            
 
     let rec check_simple_type env params ty =
       match typerepr ty with
@@ -202,15 +215,18 @@ struct
 
     let check_kind env kind = ()
 
+    (* 
+     * ===  FUNCTION  ======================================================================
+     *         Name:    type a term
+     *  Description:    infer and generalize
+     * =====================================================================================
+     *)
     let type_term env term =
-      begin_def();
+      begin_def(); (* I don't know what the levels do *)
       let ty = infer_type env term in
       end_def();
       generalize ty
 
-    let rec type_prog env = function 
-        | [a] -> (type_term env a)
-        | x :: xs -> (type_term env x); (type_prog env xs)
 
     let valtype_match env vty1 vty2 =
       let rec filter ty1 ty2 =

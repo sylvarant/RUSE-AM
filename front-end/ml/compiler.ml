@@ -155,18 +155,18 @@ struct
               variable_names := (v, s) :: !variable_names;
               s in
               (name ^ "\n")
-        | Typeconstr(path, [t1;t2]) when path = RuseMLTyping.path_arrow ->
+        | Typeconstr(path, [t1;t2]) when path = RuseML.path_arrow ->
             ((emit (type_bc BTArrow)) ^ (type_byte t1) ^ (type_byte t2))  
-        | Typeconstr(path, [t1;t2]) when path = RuseMLTyping.path_star ->
+        | Typeconstr(path, [t1;t2]) when path = RuseML.path_star ->
             (raise (Cannot_compile "Star not supported yet !"))
-        | Typeconstr(path, []) ->
-            ((path_str path) ^ "\n")
+        | Typeconstr(path, []) when path = RuseML.path_bool ->
+            (emit (type_bc BTBool)) 
+        | Typeconstr(path, []) when path = RuseML.path_int ->
+            (emit (type_bc BTInt)) 
         | Typeconstr(path, [t]) ->
-            (raise (Cannot_compile "List not supported yet !"))
+            (raise (Cannot_compile "Type constructors with one argument not yet supported"))
         | Typeconstr(path, t1::tl) ->
-            (raise (Cannot_compile "List not supported yet !"))
-        | BooleanType -> (emit (type_bc BTBool)) 
-        | IntType -> (emit (type_bc BTInt)) 
+            (raise (Cannot_compile "Type constructors with a list of arguments not yet supported"))
         | _ -> raise (Cannot_compile "Cannot convert type")
 
 
@@ -218,6 +218,23 @@ struct
             let (xxpr,tail) = (build ls) in  
             (((List.rev !outl) @ xxpr),head :: tail)  
 
+   (* 
+    * ===  FUNCTION  ======================================================================
+    *         Name:    check_program
+    *  Description:    type check a program
+    * =====================================================================================
+    *)
+    let check_program env terms = 
+        List.map (fun x -> RuseMLTyping.type_term env x) terms 
+
+   (* 
+    * ===  FUNCTION  ======================================================================
+    *         Name:    verify whether two type lists unify
+    *  Description:    type check a program
+    * =====================================================================================
+    *)
+    let compare_types env types1 types2 = 
+       List.iter2 (fun x y -> RuseMLTyping.unify env x.body y.body)types1 types2
 
    (* 
     * ===  FUNCTION  ======================================================================
@@ -225,14 +242,19 @@ struct
     *  Description:    compile a list of expressions into a string of bytes
     * =====================================================================================
     *)
-    let compile init_env terms = 
+    let compile env terms = 
 
         (* Typececk original program *)
-        (*type_term  *)
-
+        let types = (check_program env terms)
+         
         (* normalize *)
-        let anf_terms = (ANFNormalizer.normalize terms) in
-        (* TODO typecheck  again*)
+        and anf_terms = (ANFNormalizer.normalize terms) in
+
+        (* Typecheck normal form again*)
+        let anf_types =  (check_program env anf_terms) in
+
+        (* compare the results *)
+        let _ =  (compare_types env types anf_types) in
     
         (* build bye code *)
         let (xxpr,lst) = build anf_terms in

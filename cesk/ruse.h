@@ -350,7 +350,7 @@ FUNCTIONALITY void * N(makePairQ)(void *);
 FUNCTIONALITY void * N(makeListQ)(void *);
 FUNCTIONALITY void * N(makeNullQ)(void *);
 FUNCTIONALITY void * N(makeDefine)(void *,void *);
-FUNCTIONALITY void * N(makeContinuation)(KONT);
+FUNCTIONALITY void * N(makeContinuation)(void *);
 FUNCTIONALITY void * N(makeClosure)(void *,BINDING*);
 
 // type constructors
@@ -370,15 +370,15 @@ FUNCTIONALITY void * makeIS(void *,int);
 #endif
 
 // continuations
-FUNCTIONALITY KONT N(makeKLet)(VALUE,VALUE,BINDING*,KONT);
-FUNCTIONALITY KONT N(makeKCont)(BINDING*,KONT);
-FUNCTIONALITY KONT N(makeKRet)(KONT);
+FUNCTIONALITY void * N(makeKLet)(void *,void *,BINDING*,void *);
+FUNCTIONALITY void * N(makeKCont)(BINDING *,void *);
+FUNCTIONALITY void * N(makeKRet)(void *);
 
 // math TODO probably not language specific
-FUNCTIONALITY void* N(sumPrim)(void*,void*);
-FUNCTIONALITY void* N(differencePrim)(void*,void*);
-FUNCTIONALITY void* N(productPrim)(void*,void*);
-FUNCTIONALITY void* N(numequalPrim)(void*,void*);
+FUNCTIONALITY void * N(sumPrim)(void *,void *);
+FUNCTIONALITY void * N(differencePrim)(void *,void *);
+FUNCTIONALITY void * N(productPrim)(void *,void *);
+FUNCTIONALITY void * N(numequalPrim)(void *,void *);
 
 // input
 #ifndef BYTE // uselesss ?

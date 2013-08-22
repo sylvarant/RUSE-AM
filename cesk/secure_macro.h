@@ -26,14 +26,14 @@
 
     #define LOCAL SM_FUNC(SPM_NAME) static
     #define SECRET_DATA SM_DATA(SPM_NAME) static 
-    #define FUNCTIONALITY SM_FUNC(SPM_NAME) extern
+    #define FUNCTIONALITY SM_FUNC(SPM_NAME) extern __attribute__ ((visibility ("hidden")))
 
 #else 
 
     // Default
     #define LOCAL static
     #define SECRET_DATA static
-    #define FUNCTIONALITY extern
+    #define FUNCTIONALITY extern __attribute__ ((visibility ("hidden")))
     #define ENTRYPOINT extern
 
 #endif

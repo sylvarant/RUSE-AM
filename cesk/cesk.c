@@ -58,6 +58,11 @@ LOCAL void function_types(TYPE goal,TYPE * left, TYPE * right);
 // which is local to the file for security reasons
 SECRET_DATA STATE * mystate = NULL;
 
+#ifdef SECURE
+LOCAL unsigned int load = 0;
+LOCAL void* (*insecure_eval)(void*) = NULL;
+#endif
+
 
 /*-----------------------------------------------------------------------------
  *  Debug -- TODO remove or fix
@@ -90,7 +95,7 @@ LOCAL void debugState(){
     }
     DEBUG_PRINT("** CONTINUATION"); 
     VALUE cc; 
-	cc.b = N(makeContinuation)(mystate->cont);
+	cc.b = N(makeContinuation)(mystate->cont.empty);
     char * strc = N(toString)(cc,0);
     DEBUG_PRINT(" --> cont type %s",strc);
     free(strc);
@@ -327,11 +332,11 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         DEBUG_PRINT("@Jumping to Insecure");
         
         // make Continue continuation 
-        mystate->cont = N(makeKCont)(mystate->env,mystate->cont);
+        mystate->cont.empty = N(makeKCont)(mystate->env,mystate->cont.empty);
 
         // call the outside
         OTHERVALUE ptr; 
-        ptr.b = evaluate((atom.i->arg.b)); 
+        ptr.b = insecure_eval((atom.i->arg.b)); 
 
         // No Heap
         if(ptr.tt == OTHERN(UNIT)){
@@ -406,7 +411,7 @@ FUNCTIONALITY VALUE evalAtom(VALUE atom){
         VALUE val;
 
 		// make Continue continuation
-        mystate->cont = N(makeKCont)(mystate->env,mystate->cont);
+        mystate->cont.empty = N(makeKCont)(mystate->env,mystate->cont.empty);
 		
         // Call the outside
         val.b = secure_eval(atom.i->label);  
@@ -598,7 +603,7 @@ LOCAL LIMBO step()
         case N(CALLCC) : {
             VALUE proc = evalAtom(mystate->control.cc->function);
             VALUE curr; 
-			curr.b = N(makeContinuation)(mystate->cont);
+			curr.b = N(makeContinuation)(mystate->cont.empty);
             LIMBO res = apply(proc,&curr);
             return res;
         }
@@ -632,7 +637,7 @@ LOCAL LIMBO step()
             VALUE c = (mystate->control.lt->body);
             //sfreevalue(&(mystate->control));
             mystate->control = a;
-            mystate->cont = N(makeKLet)(b,c,mystate->env,mystate->cont);
+            mystate->cont.empty = N(makeKLet)(b.b,c.b,mystate->env,mystate->cont.empty);
             LIMBO ret = {NULL};
 		    return ret;
         }
@@ -850,13 +855,35 @@ FUNCTIONALITY void N(inject)(){
 
 #ifdef SECURE
 
+
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    secure_eval
- *  Description:    the entry point for the outside
+ *
+ *     Argument:    <label> 
+ *                  A label to a Ruse ML/Scheme function that was either: 
+ *                      - statically defined
+ *                      - dynamically released
+ *
+ *  Description:    executes the Ruse Ml/Scheme function that the label points to
+ *
+ * Precondition:    If either of the following preconditions are violated the 
+ *                  RUSE AM shuts down :
+ *                      - sload must be executed
+ *                      - Argument must  
+ *
+ *       Result:    A Ruse ML / Scheme VALUE in bytes in unprotected memory
  * =====================================================================================
  */
 ENTRYPOINT void * secure_eval(int label){
+
+    
+    DEBUG_PRINT("Check :: that load has been executed");
+
+    if(!load){
+        DEBUG_PRINT("Load must be called first !!");
+        exit(1);
+    }
 
     DEBUG_PRINT("Check :: label == %d",label);
     
@@ -866,7 +893,7 @@ ENTRYPOINT void * secure_eval(int label){
         DEBUG_PRINT("Check Succeeded");
 
         // make Return Continuation
-        mystate->cont = N(makeKRet)(mystate->cont);
+        mystate->cont.empty = N(makeKRet)(mystate->cont.empty);
         
         // compute
         VALUE in  = N(steprec)();
@@ -941,7 +968,8 @@ ENTRYPOINT void * secure_eval(int label){
         exit(1); 
     }
 
-    return NULL;
+    DEBUG_PRINT("Requires a valid Label");
+    exit(1);
 }
 
 #ifndef BYTE
@@ -952,10 +980,34 @@ HOOK char N(input_byte)[];
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    sload
- *  Description:    setup the secure module -> todo high up
+ *
+ *     Argument:    <name>
+ *                  The name of a secure program. This value is currently ignored :
+ *                      - It's best to just pass NULL
+ *
+ *                  <callback>
+ *                  The evaluator to be called by the secure_eval method when wanting 
+ *                  to compute insecure code.
+ *
+ *  Description:   setup the machine  
+ *
  * =====================================================================================
  */
-ENTRYPOINT void sload(char * strbuf){
+ENTRYPOINT void sload(char * strbuf,void * (*callback)(void *)){
+
+    // sancus config
+    #ifdef SANCUS_SPM
+    WDTCTL = WDTPW | WDTHOLD;
+    #ifdef FPGA
+    uart_init();
+    #endif
+    protect_sm(&secure_vm); // todo this is misplaced
+    #endif
+
+    #ifdef SANCUS_SPM
+    printf("started secure component\n");
+    #endif
+
     N(inject)();
     int l = 0;
     #ifdef BYTE
@@ -963,10 +1015,17 @@ ENTRYPOINT void sload(char * strbuf){
     #else
     ANNOTATION ** code = N(readByteCode)(N(input_byte),&l);
     #endif
+
     for(int i = 0; i < l; i++){
         int label = N(newLabel)();
         N(insertLabel)(&(mystate->label),label,code[i]);
     }
+
+    // set up callback
+    insecure_eval = callback;
+
+    // load is done
+    load = 1;
 }
 #endif
 
@@ -976,15 +1035,24 @@ ENTRYPOINT void sload(char * strbuf){
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:    evaluate
- *  Description:    main entry point for the outside
- *					argument is a pointer to deal with Sancus restriction
+ *
+ *     Argument:    <code> 
+ *                  Bytes convertible into VALUE structs that are to be executed
+ *                  by the evaluator
+ *
+ *  Description:    executes the Ruse Ml/Scheme code that the bytes represent
+ *
+ * Precondition:    If the following preconditions is violated the RUSE AM shuts down :
+ *                      - code must be convertible into a valid VALUE
+ *
+ *       Result:    A Ruse ML / Scheme VALUE in bytes in unprotected memory
  * =====================================================================================
  */
-HOOK void * evaluate(void * v){ 
+HOOK void * evaluate(void * code){ 
 
 	// make Return continuation
-    mystate->cont = N(makeKRet)(mystate->cont);
-    mystate->control.b = v;
+    mystate->cont.empty = N(makeKRet)(mystate->cont.empty);
+    mystate->control.b = code;
 
     // compute
     VALUE ans  = N(steprec)();

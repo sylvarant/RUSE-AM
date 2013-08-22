@@ -5,7 +5,7 @@
 ############################
 # Script variables
 ############################
-options="hnslpdfwc"
+options="ahnslpdfwc"
 Usage="Usage : `basename $0` [-$options] sourcefile"
 slast="${@:(-2):1}"
 last=${!#}
@@ -24,6 +24,7 @@ warnopt=-w
 byteopt="BYTE"
 langopt="ALL"
 platform=""
+library=""
 front="./front-end"
 language=""
 byte_1=""
@@ -240,7 +241,7 @@ function compile
     make --directory=$front/ml/  1>"$ml_complog" 2>&1 || { echo -e "Front-end compilation failed ::\n$(cat $ml_complog)\nAborting ruse"; exit 1; }
 
     # Make 
-    make $platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt FPGA=$fpga  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
+    make ${library}$platform -s --directory=buildsrc LANG=-D$langopt DEBOPT=$debopt CWARNFLAGS=$warnopt BYTEOPT=-D$byteopt FPGA=$fpga  2>&1  || { echo "Compilation failed, aborting ruse"; exit 1; }
 }
 
 
@@ -267,10 +268,19 @@ while getopts "$options" OPTION
 do
 	case $OPTION in
 
+    # create the VM and it's program as an API 
+    a)  aflag=1
+        bflag=1
+        library="library"
+        cp cesk/api.h lib/
+        break
+        ;;
+
     # native add in code
     n) bflag=1
         ;;
 
+    # hardware build
     h)  fpga=1
         sancus_setup
         break
@@ -344,7 +354,7 @@ if [[ $cflag -eq 1 ]]; then
 fi
 
 # run baby run
-if [[ $niflag -ne 1 ]]; then
+if [[ $niflag -ne 1  ]] && [[ $aflag -ne 1 ]] ; then
     if [[ $bflag -eq 1 ]]; then
         execute
     else

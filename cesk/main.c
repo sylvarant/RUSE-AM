@@ -81,7 +81,7 @@ int main(int argc,const char ** argv){
     char * input2 = read(argv[2]);
       
     // TODO :: secure ? Load secure module
-    sload(input2); 
+    sload(input2,evaluate); 
     free(input2);
     
     // read in insecure program
@@ -103,20 +103,8 @@ int main(int argc,const char ** argv){
  */
 int main(void){
 
-    #ifdef SANCUS_SPM
-    WDTCTL = WDTPW | WDTHOLD;
-    #ifdef FPGA
-    uart_init();
-    #endif
-    //protect_sm(&secure_vm);
-    #endif
-
-    #ifdef SANCUS_SPM
-    printf("started\n");
-    #endif
-
 	// sload has its secret code built in
-    sload(NULL);
+    sload(NULL,evaluate);
 
     int lines =0;
     VALUE * cmds = N(readByteCode)(N(input_byte),&lines);

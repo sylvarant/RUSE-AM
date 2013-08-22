@@ -17,7 +17,6 @@
 #ifndef GLOBAL_INCLUDED
 #define GLOBAL_INCLUDED
 
-#include <stdlib.h> // TODO remove duplicates
 #include "spm.h"
 
 /*-----------------------------------------------------------------------------
@@ -25,6 +24,7 @@
  *-----------------------------------------------------------------------------*/
 
 #ifdef DEBUG
+    #include <stdlib.h> // TODO remove duplicates
     #include <stdio.h>
     #define DEBUG_PRINT(...) \
 	do{	fprintf(stderr,"DEBUG:: "); fprintf(stderr,__VA_ARGS__); fprintf(stderr,"\n");fflush(stderr);} while(0)
@@ -43,7 +43,7 @@ enum LANGUAGE {SCHEME,ML};
  *  Secure Entrypoints 
  *-----------------------------------------------------------------------------*/
 ENTRYPOINT void * secure_eval(int);
-ENTRYPOINT void sload (char *);
+ENTRYPOINT void sload(char *,void * callback(void *));
 
 
 /*-----------------------------------------------------------------------------

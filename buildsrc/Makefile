@@ -6,13 +6,18 @@
 #============================================
 # Platform specific settings
 #============================================
+all:
+
+uname_S = $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 ifeq ($(uname_S),Darwin)
-	DEF_TARGET = darwin	
+ 	DEF_TARGET = darwin	
+	NAME_LIB = -install_name
 endif
 
 ifeq ($(uname_S),Linux)
 	DEF_TARGET = linux
+	NAME_LIB = -soname
 endif
 
 
@@ -37,6 +42,14 @@ SANEXEC = ../bin/exec.elf
 SANEXEC_NO_HMAC = ../bin/exec-no-hmac.elf
 
 #============================================
+# Linkable Targets
+#============================================
+
+LIBSO = ../lib/libruse.so
+LIBA  = $(LIBSO).1
+LIBB  = $(LIBSO).1.0.1 
+
+#============================================
 # Flags
 #============================================
 
@@ -52,14 +65,19 @@ KEY = deadbeefcafebabedeadbeefcafebabe
 
 # compile all c files in buildsrc
 SOURCE=$(wildcard *.c)
+LIBSOURCE= $(filter-out main.c,$(SOURCE))
 
-# generate a set of insecure objects
+# generate a set of insecure objects with main.o
 INSECURE= $(SOURCE:.c=.o)
 SANINSECURE= $(SOURCE:.c=.san_o)
 
+# generate the objects for the library
+LIBINSECURE=$(LIBSOURCE:.c=.o)
+LIBSANSECURE=$(LIBSOURCE:.c=.san_o)
+
 # generate a set of secure objects
-SECURE= $(SOURCE:.c=.o_S)
-SANSECURE= $(SOURCE:.c=.san_o_S)
+SECURE= $(LIBSOURCE:.c=.o_S)
+SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 
 
 #============================================
@@ -92,6 +110,13 @@ $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 
 sancus: $(SANEXEC_NO_HMAC) 
 	sancus-hmac --verbose --key $(KEY) -o $(SANEXEC) $(SANEXEC_NO_HMAC)
+
+library: $(CFLAGS) += -fPIC
+library: $(LIBINSECURE) $(SECURE)
+	$(CC) -shared -Wl,$(NAME_LIB),$(LIBA) -o $(LIBB) $^
+	ln -sf  $(LIBB) $(LIBSO)
+	ln -sf  $(LIBB) $(LIBA)
+
 
 
 #============================================

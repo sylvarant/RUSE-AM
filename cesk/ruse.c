@@ -13,7 +13,13 @@
  * =====================================================================================
  */
 
-#include "cesk.h" 
+#ifdef SECURE
+#include "ruse_all.h" 
+#else
+#include "ruse.h"
+#endif
+
+#include <stdlib.h>
 
 
 /*-----------------------------------------------------------------------------
@@ -324,11 +330,13 @@ FUNCTIONALITY void* N(makeLetrec)(int c,void* v,VALUE * t){
  *                  around N(Kont)
  * =====================================================================================
  */
-FUNCTIONALITY void* N(makeContinuation)(KONT kstar){
+FUNCTIONALITY void* N(makeContinuation)(void * kstar){
     VALUE val;
+    KONT arg;
+    arg.empty    = kstar;
     val.k        = MALLOC(sizeof(struct N(Continuation)));
     val.k->t     = N(CONTINUATION);
-    val.k->kstar = kstar;
+    val.k->kstar = arg;
     return val.b;
 }
 

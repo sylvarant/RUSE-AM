@@ -155,6 +155,8 @@ LOCAL void * readType(char *** strbuf){
                 exit(1);
         }
     }
+    DEBUG_PRINT("No type to read in buffer");
+    exit(1);
 }
 
 /* 
@@ -382,10 +384,10 @@ FUNCTIONALITY void * N(readCode)(char *** strbuf){
             DEBUG_PRINT("ERROR: Unkown Identifier :: %d",id);
             exit(1);
         }
-    }else{
-        DEBUG_PRINT("ERROR: Missing Identifier @ fscan");
-        exit(1);
     }
+    
+    DEBUG_PRINT("ERROR: Missing Identifier @ fscan");
+    exit(1);
 }
 
 

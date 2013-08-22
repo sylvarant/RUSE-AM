@@ -15,6 +15,7 @@
  */
 
 #ifdef SECURE
+#ifndef TYPING_INCLUDED
 #define TYPING_INCLUDED
 
 #include "global.h"

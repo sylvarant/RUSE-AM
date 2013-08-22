@@ -6,6 +6,7 @@ Directory structure
 - cesk/ : implementation of the CESK machine
 - buildsrc/ : all files used to build the executable contains the Makefile
 - bin/ : the executables produced through compilation
+- lib/ : the libraries produced as attack targets for low level attacks
 
 Executing
 ==================

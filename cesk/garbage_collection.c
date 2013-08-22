@@ -26,7 +26,7 @@
  *-----------------------------------------------------------------------------*/
 
 LOCAL void clearValuels(int c,void * s,VALUE * ls);
-LOCAL void emptyBinding (BINDING * env); // TODO remove
+//LOCAL void emptyBinding (BINDING * env); // TODO remove
 
 
 /* 
@@ -53,7 +53,7 @@ LOCAL void clearValuels(int c,void * s,VALUE * ls){
  *                      references to language descriptors
  * =====================================================================================
  */
-LOCAL void emptyBinding(BINDING * env){
+/*LOCAL void emptyBinding(BINDING * env){
 
     N(Binding) *node = env;
     N(Binding) *nnode = node;
@@ -63,7 +63,7 @@ LOCAL void emptyBinding(BINDING * env){
         free(nnode); // TODO fix this massive leak
         nnode = node;
     }
-}
+}*/
 
 
 /* 

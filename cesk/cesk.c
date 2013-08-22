@@ -16,6 +16,7 @@
 #include "cesk.h"
 #include "load.h"
 #include "string.h"
+#include "type.h"
 
 
 /*-----------------------------------------------------------------------------

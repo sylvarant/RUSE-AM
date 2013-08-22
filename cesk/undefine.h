@@ -21,6 +21,7 @@
 #undef N(NAME) 
 #undef OTHERN(NAME) 
 #undef VALUE 
+#undef OTHERTYPE
 #undef OTHERVALUE 
 #undef BINDING 
 #undef OTHERBINDING 

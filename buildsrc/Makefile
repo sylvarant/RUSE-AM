@@ -20,7 +20,6 @@ ifeq ($(uname_S),Linux)
 	NAME_LIB = -soname
 endif
 
-
 #============================================
 # Tools
 #============================================
@@ -79,7 +78,6 @@ LIBSANSECURE=$(LIBSOURCE:.c=.san_o)
 SECURE= $(LIBSOURCE:.c=.o_S)
 SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 
-
 #============================================
 # Compiling Objects
 #============================================
@@ -95,7 +93,6 @@ SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 
 %.san_o_S: %.c
 	$(SCC) $(CFLAGS) $(SANFLAGS) -DSECURE -c -o $@ $<	
-
 
 #============================================
 # Linking
@@ -117,14 +114,11 @@ library: $(LIBINSECURE) $(SECURE)
 	ln -sf  $(LIBB) $(LIBSO)
 	ln -sf  $(LIBB) $(LIBA)
 
-
-
 #============================================
 # Results
 #============================================
 
 all: $(DEF_TARGET) 
-
 
 #============================================
 # Helpers

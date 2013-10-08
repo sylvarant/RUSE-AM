@@ -2,11 +2,13 @@ Directory structure
 ===============
 - test/ : test cases
 - test/log : detailed logs of all the tests
-- parser/ : parser
+- front-end/ : ml and scheme paresers
 - cesk/ : implementation of the CESK machine
 - buildsrc/ : all files used to build the executable contains the Makefile
 - bin/ : the executables produced through compilation
 - lib/ : the libraries produced as attack targets for low level attacks
+- attacks/ : attacks to be explored
+- tools/ : helpful scripts
 
 Executing
 ==================
@@ -21,8 +23,8 @@ Executing
 
 Testing 
 ==================
-./testruse
+./tools/testruse
 
 Specification
 ==================
-language-spec
+lang-spec/

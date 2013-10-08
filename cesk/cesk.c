@@ -948,7 +948,7 @@ ENTRYPOINT void * secure_eval(int label){
                 // apply closure to SI 'z 
                 VALUE * ls = MALLOC(2 * sizeof(VALUE));
                 ls[0].b = in.b;
-                ls[1].b = makeSI(left.byte,la[0].b); // TODO typecheck
+                ls[1].b = makeSI(left.byte,la[0].b); 
                 
                 // add the closure to the storage position at c + new label
                 ANNOTATION * code = MALLOC(sizeof(ANNOTATION));

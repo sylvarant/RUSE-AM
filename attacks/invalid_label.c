@@ -12,6 +12,6 @@ int main(int argc, char* argv[]) {
     sload(NULL,evaluate); 
     printf("Executing\n");
     void * ret = secure_eval(1); 
-    printf("Done %x \n",(unsigned int) ret);
+    printf("Done %lx \n",(unsigned long) ret);
     return 0;
 }

@@ -13,18 +13,25 @@ Directory structure
 Executing
 ==================
 ./ruse [-slpdfwc] sourcefile
+    -a :: creat the vm as an api
     -s :: produce sancus executable
+    -h :: hardware (fpga) oriented build
+    -n :: native mode - compile the bytecode into the vm
     -l :: produce a log of the debug and build information in test/log
     -d :: activate debug mode, outputs machine trace on stderr
-    -f :: Fides support - Not yet available !!
+    -f :: Fides support - broken !!
     -p :: Preprocess the input file, outputs the results and aborts
     -c :: Compile the input file, no execution
     -w :: Compile with warnings
 
 Testing 
 ==================
-./tools/testruse
+Configure setup using :
+    ./tools/update
+Execute tests using :
+    ./tools/testruse
 
 Specification
 ==================
 lang-spec/
+

@@ -229,13 +229,13 @@ function compile
     #clear buildsrc
     make clean -s --directory=buildsrc 2>/dev/null
 
-    # copy all cesk to buildsrc - rewriting strategy ?
+    # copy all am to buildsrc - rewriting strategy ?
     if [[ $bflag -eq 1 ]]; then
         cp -p $tmp_native_1 $native_1
         cp -p $tmp_native_2 $native_2
     fi
-    cp -p cesk/*.c buildsrc
-    cp -p cesk/*.h buildsrc
+    cp -p am/*.c buildsrc
+    cp -p am/*.h buildsrc
 
     # Make Ocaml front-end
     make --directory=$front/ml/  1>"$ml_complog" 2>&1 || { echo -e "Front-end compilation failed ::\n$(cat $ml_complog)\nAborting ruse"; exit 1; }
@@ -272,7 +272,7 @@ do
     a)  aflag=1
         bflag=1
         library="library"
-        cp cesk/api.h lib/
+        cp am/api.h lib/
         break
         ;;
 

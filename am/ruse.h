@@ -69,8 +69,9 @@ enum N(Tag) {
     N(UNIT), N(INT), N(BOOLEAN), N(CLOSURE),  N(LIST), N(QUOTE), 
 
     // Computation
-    N(CONTINUATION), N(PRIM), N(LAM), N(IF), N(SYMBOL), N(APPLICATION), N(CALLCC), N(SET), 
-    N(LET), N(LETREC), N(BEGIN), N(CAR), N(CDR), N(CONS), N(LISTQ), N(DEFINE), N(NULLQ), N(PAIRQ),
+    N(CONTINUATION), N(PRIM), N(LAM), N(IF), N(SYMBOL), N(APPLICATION), N(CALLCC), 
+    N(SET), N(LET), N(LETREC), N(BEGIN), N(CAR), N(CDR), N(CONS), N(LISTQ), N(DEFINE), 
+    N(NULLQ), N(PAIRQ),
 
     // Boundary transition
     #ifdef SECURE

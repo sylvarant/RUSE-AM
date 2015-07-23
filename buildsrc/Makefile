@@ -102,6 +102,9 @@ SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 darwin: $(INSECURE) $(SECURE)
 	$(LD) -o $(EXEC) $^
 
+linux: $(INSECURE) $(SECURE)
+	$(LD) -o $(EXEC) $^
+
 $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^ libdev.a
 

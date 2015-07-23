@@ -1,8 +1,15 @@
-Directory structure
-===============
+# RUSE abstract machine architecture
+
+Academic research project that aimed to develop 
+abstract machines by duplicating them across a secure and insecure low-level memory space. 
+Halted, due to lack of publishable results.
+
+
+## Directory structure
+
 - test/ : test cases
 - test/log : detailed logs of all the tests
-- front-end/ : ml and scheme paresers
+- front-end/ : ml and scheme parsers
 - cesk/ : implementation of the CESK machine
 - buildsrc/ : all files used to build the executable contains the Makefile
 - bin/ : the executables produced through compilation
@@ -10,8 +17,8 @@ Directory structure
 - attacks/ : attacks to be explored
 - tools/ : helpful scripts
 
-Executing
-==================
+## Executing
+
 ./ruse [-slpdfwc] sourcefile
     -a :: creat the vm as an api
     -s :: produce sancus executable
@@ -19,19 +26,18 @@ Executing
     -n :: native mode - compile the bytecode into the vm
     -l :: produce a log of the debug and build information in test/log
     -d :: activate debug mode, outputs machine trace on stderr
-    -f :: Fides support - broken !!
+    -f :: Fides support - (needs to be redone !!)
     -p :: Preprocess the input file, outputs the results and aborts
     -c :: Compile the input file, no execution
     -w :: Compile with warnings
 
-Testing 
-==================
+## Testing 
+
 Configure setup using :
     ./tools/update
 Execute tests using :
     ./tools/testruse
 
-Specification
-==================
-lang-spec/
+## Specification
+see lang-spec/
 

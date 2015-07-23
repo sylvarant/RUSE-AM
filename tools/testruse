@@ -88,12 +88,14 @@ while ( my ($key, $value) = each(%langs)){
 # Total evaluation
 if($counter == (scalar keys %langs)){
     say "\033[1;33m"."# RUSE is working !\033[0m";
+    exit 0;
 }else{
     say "\033[1;31m"."# RUSE is failing !\033[0m";
-
+    exit 1;
 }
 
 # Timing
-my $time_taken = time - $start;
-say "# Tests completed in $time_taken seconds"; 
+#my $time_taken = time - $start;
+#say "# Tests completed in $time_taken seconds"; 
+
 

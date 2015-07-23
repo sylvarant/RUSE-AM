@@ -67,3 +67,4 @@ echo "Done Generating Byte Code"
 Timestamp="$(($(date +%s)-Timestamp))"
 echo "Update completed in : ${Timestamp} seconds"
 
+exit 0

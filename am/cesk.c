@@ -124,7 +124,7 @@ LOCAL void debugState(){
  */
 LOCAL unsigned int isAtom(VALUE el)
 {
-    enum N(Tag) atoms[] = {   N(LAM),N(INT),N(SYMBOL),N(BOOLEAN),N(PRIM),
+    enum N(Tag) atoms[] = { N(LAM),N(INT),N(SYMBOL),N(BOOLEAN),N(PRIM),
                             N(LIST),N(QUOTE),N(CLOSURE),
                             #ifdef SECURE
                                 SI

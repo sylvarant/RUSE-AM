@@ -1,5 +1,7 @@
 # RUSE abstract machine architecture
 
+[![Build Status](https://travis-ci.org/sylvarant/RUSE-AM.svg?branch=master)](https://travis-ci.org/sylvarant/RUSE-AM)
+
 Academic research project that aimed to develop 
 abstract machines by duplicating them across a secure and insecure low-level memory space. 
 Halted, due to lack of publishable results.

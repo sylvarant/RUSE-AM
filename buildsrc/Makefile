@@ -4,23 +4,6 @@
 #########################################
 
 #============================================
-# Platform specific settings
-#============================================
-all:
-
-uname_S = $(shell sh -c 'uname -s 2>/dev/null || echo not')
-
-ifeq ($(uname_S),Darwin)
- 	DEF_TARGET = darwin	
-	NAME_LIB = -install_name
-endif
-
-ifeq ($(uname_S),Linux)
-	DEF_TARGET = linux
-	NAME_LIB = -soname
-endif
-
-#============================================
 # Tools
 #============================================
 
@@ -31,6 +14,27 @@ CC = gcc
 SCC = sancus-cc
 
 SHELL := /bin/bash
+
+#============================================
+# Platform specific settings
+#============================================
+all:
+
+uname_S = $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
+ifeq ($(uname_S),Darwin)
+ 	DEF_TARGET = darwin	
+	NAME_LIB = -install_name
+	LD = clang
+	CC = clang
+endif
+
+ifeq ($(uname_S),Linux)
+	DEF_TARGET = linux
+	NAME_LIB = -soname
+endif
+
+
 
 #============================================
 # Executable Targets
@@ -52,7 +56,7 @@ LIBB  = $(LIBSO).1.0.1
 # Flags
 #============================================
 
-CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g
+CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g -fprofile-arcs -ftest-coverage
 SANFLAGS = -DSANCUS_SPM $(FPGA)
 MACFLAGS= -std=gnu99
 SANLDFLAGS = --rom-size 48K --ram-size 10K  --standalone --sm-stack-size=2048
@@ -100,10 +104,10 @@ SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 
 #todo parameterize inlinking
 darwin: $(INSECURE) $(SECURE)
-	$(LD) -o $(EXEC) $^
+	$(LD)  --coverage -o $(EXEC) $^
 
 linux: $(INSECURE) $(SECURE)
-	$(LD) -o $(EXEC) $^
+	$(LD) -lgcov  -o $(EXEC) $^
 
 $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^ libdev.a
@@ -128,5 +132,6 @@ all: $(DEF_TARGET)
 #============================================
 
 clean:
-	$(RM)  *.c *.h $(SECURE) $(INSECURE) $(SANSECURE) $(SANINSECURE)
+	$(RM)  *.c *.h *.gcno $(SECURE) $(INSECURE) $(SANSECURE) $(SANINSECURE)
+
 

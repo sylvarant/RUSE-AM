@@ -107,7 +107,7 @@ darwin: $(INSECURE) $(SECURE)
 	$(LD)  --coverage -o $(EXEC) $^
 
 linux: $(INSECURE) $(SECURE)
-	$(LD) -lgcov  -o $(EXEC) $^
+	$(LD) --coverage  -o $(EXEC) $^
 
 $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^ libdev.a

@@ -4,11 +4,13 @@ compiler: gcc
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra 
+  - sudo apt-get install -qq ocaml ocaml-native-compilers camlp4-extra opam
   - git clone https://github.com/greghendershott/travis-racket.git
   - cat travis-racket/install-racket.sh | bash # pipe to bash not sh!
   - export PATH="${RACKET_DIR}/bin:${PATH}" #install-racket.sh can't set for us
+  - opam install bisect
 #  - sudo pip install cpp-coveralls
+
 
 script: ./tools/update && tools/testruse
 

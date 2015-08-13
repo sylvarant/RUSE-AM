@@ -42,7 +42,7 @@ while ( my ($key, $value) = each(%langs)){
 
     # input files
     my @input = `ls test/$key/ | egrep "$value"`;
-	@input= map {$_ =~ s/\.[^.]+$//; $_} @input;
+  	@input= map {$_ =~ s/\.[^.]+$//; $_} @input;
 
     #results
     my %problems = ();

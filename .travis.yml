@@ -8,11 +8,11 @@ before_install:
   - git clone https://github.com/greghendershott/travis-racket.git
   - cat travis-racket/install-racket.sh | bash # pipe to bash not sh!
   - export PATH="${RACKET_DIR}/bin:${PATH}" #install-racket.sh can't set for us
-  - sudo pip install cpp-coveralls
+#  - sudo pip install cpp-coveralls
 
 script: ./tools/update && tools/testruse
 
-after_success:
-  - coveralls --include buildsrc --exclude am --gcov-options '\-lp'
+#after_success:
+#  - coveralls --include buildsrc --exclude am --gcov-options '\-lp'
 
 

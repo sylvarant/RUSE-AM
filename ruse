@@ -172,7 +172,7 @@ function preprocess
             bytext="byte_ml"
             byte_1="/tmp/input1.byte_ml"
             byte_2="/tmp/input2.byte_ml"
-            $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "ML Front-end failed to compile the source file :: $1 ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
+            BISECT_FILE=$front/ml/_build/coverage $front/ml/main.native < $1  1>buildsrc/result.parser 2>$parse_log || { echo -e "ML Front-end failed to compile the source file :: $1 ::\n$(cat $parse_log)\nAborting ruse"; exit 1; }
             awk '/==@@==PARSER==@@==/{x="/tmp/input"++i".byte_ml";next}{print > x;}' buildsrc/result.parser
             ;;
 

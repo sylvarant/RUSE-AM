@@ -56,7 +56,7 @@ LIBB  = $(LIBSO).1.0.1
 # Flags
 #============================================
 
-CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g -fprofile-arcs -ftest-coverage
+CFLAGS = $(BYTEOPT) $(DEBOPT) $(CWARNFLAGS) -g #-fprofile-arcs -ftest-coverage
 SANFLAGS = -DSANCUS_SPM $(FPGA)
 MACFLAGS= -std=gnu99
 SANLDFLAGS = --rom-size 48K --ram-size 10K  --standalone --sm-stack-size=2048
@@ -104,10 +104,11 @@ SANSECURE= $(LIBSOURCE:.c=.san_o_S)
 
 #todo parameterize inlinking
 darwin: $(INSECURE) $(SECURE)
-	$(LD)  --coverage -o $(EXEC) $^
+	$(LD)  -o $(EXEC) $^
+	#$(LD)  --coverage -o $(EXEC) $^
 
 linux: $(INSECURE) $(SECURE)
-	$(LD) --coverage  -o $(EXEC) $^
+	$(LD) -o $(EXEC) $^
 
 $(SANEXEC_NO_HMAC): $(SANINSECURE) $(SANSECURE)
 	$(SLD) $(SANLDFLAGS) -o  $@ $^ libdev.a
@@ -126,6 +127,7 @@ library: $(LIBINSECURE) $(SECURE)
 #============================================
 
 all: $(DEF_TARGET) 
+#	find . -name "*.gcda" -print0 | xargs -0 rm # clean up gcda
 
 #============================================
 # Helpers

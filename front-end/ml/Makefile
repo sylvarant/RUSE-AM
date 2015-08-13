@@ -8,21 +8,21 @@
 # Tools
 #============================================
 
-OCAMLBUILD=ocamlbuild
-
+OCAMLBUILD = ocamlbuild
+FINDFLAGS = -package bisect -syntax camlp4o
 
 #============================================
 # Executable Targets
 #============================================
 
-TARGET=main
+TARGET = main
 
 
 #============================================
 # Compilation sources
 #============================================
 
-SOURCES =$(wildcard *.ml*)
+SOURCES = $(wildcard *.ml*)
 
 
 #============================================
@@ -30,7 +30,7 @@ SOURCES =$(wildcard *.ml*)
 #============================================
 
 native:
-	$(OCAMLBUILD) $(TARGET).native
+	$(OCAMLBUILD) -use-ocamlfind $(FINDFLAGS)  $(TARGET).native
 
 
 #============================================

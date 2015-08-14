@@ -12,6 +12,7 @@ before_install:
   - opam init
   - opam install ocamlfind
   - opam install bisect
+  - eval `opam config env`
 #  - sudo pip install cpp-coveralls
 
 

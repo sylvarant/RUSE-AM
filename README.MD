@@ -43,3 +43,6 @@ Execute tests using :
 ## Specification
 see lang-spec/
 
+## License
+
+[Artistic License 2.0](http://www.perlfoundation.org/artistic_license_2_0)
